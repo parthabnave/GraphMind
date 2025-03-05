@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const User = require('../../../db/User_schema');
 const bcrypt = require('bcrypt');
+const jwt=require('jsonwebtoken');
+const secret=require("../../secret");
 const salt=7;
 
 router.post("/login",async(req,res)=>{
@@ -13,7 +15,9 @@ router.post("/login",async(req,res)=>{
     
     if(!isMatch) return res.status(400).json({msg:"Invalid password"});
     
-    res.json({msg:"User logged in successfully", user:user});
+    const token=jwt.sign({id:user.id,email:user.email,name:user.name},secret,{expiresIn:3600});
+    
+    res.json({msg:"User logged in successfully", user:user,token:token});
 })
 
 
