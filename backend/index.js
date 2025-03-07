@@ -1,7 +1,7 @@
 const express=require("express");
 const app=express();
-const login=require("./login/login");
-const dashboard=require("../routes/dashboard/dashboard");
+const login=require("../backend/routes/login/login");
+const dashboard=require("../backend/routes/dashboard/dashboard");
 app.use(express.json());
 
 app.use("/getStarted",login);

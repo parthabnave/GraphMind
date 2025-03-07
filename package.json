@@ -1,0 +1,26 @@
+{
+  "name": "graphmind",
+  "version": "1.0.0",
+  "description": "This project is a AI-based UML design web application that translates user-provided text prompts into UML diagrams. Utilizing an NLP model, the system translates natural language descriptions into PlantUML code and supports automated diagram generation. Users can also customize and fine-tune the generated UML in the application for convenience and accuracy. By combining AI-powered text analysis with dynamic visualization of UML, the platform simplifies the design process for developers and analysts. This application maximizes software modeling effectiveness with UML design made intuitive, accessible, and flexible depending on user requirements.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/parthabnave/GraphMind.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/parthabnave/GraphMind/issues"
+  },
+  "homepage": "https://github.com/parthabnave/GraphMind#readme",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.12.1"
+  }
+}

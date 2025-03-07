@@ -7,7 +7,7 @@ const salt=7;
 
 router.post("/login",async(req,res)=>{
     const {email, password} = req.body;
-    const user=User.findOne({email});
+    const user=await User.findOne({email});
 
     if(!user) return res.status(400).json({msg:"User not found"});
     
@@ -27,10 +27,8 @@ router.post("/register",async(req,res)=>{
     const hashed=await bcrypt.hash(password,salted);
     
     const user=new User({name,phn_no,email,password:hashed});
-    user.save((err,res)=>{
-        if(err) return res.status(400).json({msg:err.message});
-        res.json({msg:"User registered successfully", user:user});
-    })
+    await user.save();
+    return res.json({msg:"User registered successfully"});
 })
 
 module.exports = router;

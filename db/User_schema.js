@@ -1,6 +1,6 @@
 const mongoose=require('mongoose'); 
 
-mongoose.connect("url").then(console.log("DB connected Successfully!"));
+mongoose.connect("mongodb://localhost:27017/GraphMind").then(()=>console.log("DB connected Successfully!"));
 
 const UserSchema=new mongoose.Schema({
     name:{type:String, required:true},
