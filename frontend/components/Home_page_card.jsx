@@ -4,7 +4,7 @@ function Card({ title, titleColor = 'blue', boxBackground = 'white', learnMoreCo
   return (
     <div
       className="border border-black flex justify-between items-center shadow-xl mx-auto"
-      style={{ backgroundColor: boxBackground, borderRadius: "1.5rem", width: "650px", height: "300px" }}
+      style={{ backgroundColor: boxBackground, borderRadius: "1.5rem", width: "650px", height: "300px",marginTop:"0px", paddingTop:"0px",paddingLeft:"1.5rem"}}
     >
       <div className="mt-0">
         <div

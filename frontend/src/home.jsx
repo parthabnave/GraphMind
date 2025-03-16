@@ -132,7 +132,7 @@ function Navbar2()
 {
     return(
         <div className="text-white bg-black h-[400px]">
-        <div className="bg-black flex space-x-12 items-center p-5 shadow-md">
+        <div className="bg-black flex space-x-12 items-center p-5 shadow-[0_0_7px_white]">
             <h1 className="text-5xl  font-semibold">Graph-Mind</h1>
             <div className="flex space-x-8 text-xl font-semibold text-gray-600">
                 <img src={linkedin} alt="linkedin" />
