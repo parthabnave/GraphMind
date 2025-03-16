@@ -1,16 +1,24 @@
-function card({header})
-{
-    return(
-        <div class="w-96 rounded-2xl shadow-lg p-6 flex flex-col justify-between">
-        <div>
-          <h2 class="text-lg font-bold inline-block p-2 rounded-lg">{header}</h2>
-          <p class="mt-4">An illustration of system interactions.</p>
+function Card({ title, titleColor = 'blue', boxBackground = 'white', learnMoreColor = 'gray', image }) {
+    return (
+      <div
+        className={`w-[500px] h-[200px] rounded-3xl border border-black p-6 flex justify-between items-center shadow-md bg-${boxBackground}mx-auto`}
+      >
+        <div className="space-y-4">
+          <div
+            className={`text-3xl font-bold px-3 py-1 text-${titleColor} rounded-lg inline-block`}
+            
+          >
+            {title}
+          </div>
+          <div className={`flex items-center text-${boxBackground} space-x-2 text-lg font-semibold`}>
+            <span className="text-black text-2xl">↗</span>
+            <span>Learn more</span>
+          </div>
         </div>
-        <div class="flex items-center gap-2 text-gray-500 mt-6">
-          <span class="text-green-500 text-xl">&#x27A1;</span>
-          <span>Learn more</span>
-        </div>
+        {image && <img src={image} alt="Diagram" className="w-32 h-32" />}
       </div>
-    )
-}
-export default card;
+    );
+  }
+  
+  export default Card;
+  
