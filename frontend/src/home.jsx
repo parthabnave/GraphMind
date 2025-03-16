@@ -1,6 +1,11 @@
 import Announcement from "./assets/Home_page_announcement.svg"
 import Card from"../components/Home_page_card.jsx"
 import UseCaseDesign from "./assets/UseCaseDesign.svg"
+import System_ArchDiagram from "./assets/System_Arch.svg"
+import ERDia from "./assets/ERDiagram.svg"
+import twitter from "./assets/twitter.svg"
+import facebook from "./assets/facebook.svg"
+import linkedin from "./assets/linkedin.svg"
 function Home()
 {
     return(
@@ -14,14 +19,10 @@ function Home()
             <br />
             <br />
             <br />
-            <Card 
-                title="Use Case Diagram" 
-                titleColor="#BFDBFE" 
-                boxBackground="white" 
-                learnMoreColor="black" 
-                image={UseCaseDesign} 
-            />
-
+           <Cards/>
+           <br />
+           <br />
+           <Navbar2/>
         </>
     )
    
@@ -86,4 +87,51 @@ function ServiceHeader()
         </div>
     )
 }
+function Cards() {
+    return (
+        <>
+        <div className="grid grid-cols-2 gap-10">
+                <Card 
+                title="Use Case Diagram" 
+                titleColor="#BFDBFE" 
+                boxBackground="white" 
+                learnMoreColor="gray" 
+                image={UseCaseDesign} 
+                />
+                <Card 
+                title="System Architecture Diagram" 
+                titleColor="white" 
+                boxBackground="#62a8bd" 
+                learnMoreColor="white" 
+                image={System_ArchDiagram} 
+                />
+           
+                <Card
+                title="ER Diagram" 
+                titleColor="white" 
+                boxBackground="black" 
+                learnMoreColor="white" 
+                image={ERDia} 
+                ></Card>
+             </div>
+            </>
+    );
+}
+
+
+
+function Navbar2()
+{
+    return(
+        <div className="flex justify-between items-center p-5 shadow-md">
+            <h1 className="text-5xl font-semibold">Graph-Mind</h1>
+            <div className="flex space-x-8 text-xl font-semibold text-gray-600">
+                <img src={linkedin} alt="linkedin" />
+                <img src={facebook} alt="facebook" />
+                <img src={twitter} alt="twitter" />
+            </div>
+        </div>
+    ) 
+}
+
 export default Home;
