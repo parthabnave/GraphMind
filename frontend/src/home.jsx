@@ -14,7 +14,14 @@ function Home()
             <br />
             <br />
             <br />
-            <Card title={"Use Case Diagram"} titleColor={"bg-blue-200"} boxBackground={"white"} learnMoreColor={"black"} image={UseCaseDesign}/>
+            <Card 
+                title="Use Case Diagram" 
+                titleColor="#BFDBFE" 
+                boxBackground="white" 
+                learnMoreColor="black" 
+                image={UseCaseDesign} 
+            />
+
         </>
     )
    
