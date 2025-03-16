@@ -6,6 +6,7 @@ import ERDia from "./assets/ERDiagram.svg"
 import twitter from "./assets/twitter.svg"
 import facebook from "./assets/facebook.svg"
 import linkedin from "./assets/linkedin.svg"
+import arrow from "./assets/Arrow.svg"
 function Home()
 {
     return(
@@ -20,6 +21,13 @@ function Home()
             <br />
             <br />
            <Cards/>
+           <br />
+           <br />
+           <br />
+           <br />
+           <br />
+           <br />
+           <br />
            <br />
            <br />
            <Navbar2/>
@@ -90,7 +98,7 @@ function ServiceHeader()
 function Cards() {
     return (
         <>
-        <div className="grid grid-cols-2 gap-10">
+        <div className="grid grid-cols-2 px-20 gap-10">
                 <Card 
                 title="Use Case Diagram" 
                 titleColor="#BFDBFE" 
@@ -109,7 +117,7 @@ function Cards() {
                 <Card
                 title="ER Diagram" 
                 titleColor="white" 
-                boxBackground="black" 
+                boxBackground="#374151" 
                 learnMoreColor="white" 
                 image={ERDia} 
                 ></Card>
@@ -123,14 +131,48 @@ function Cards() {
 function Navbar2()
 {
     return(
-        <div className="flex justify-between items-center p-5 shadow-md">
-            <h1 className="text-5xl font-semibold">Graph-Mind</h1>
+        <div className="text-white bg-black h-[400px]">
+        <div className="bg-black flex space-x-12 items-center p-5 shadow-md">
+            <h1 className="text-5xl  font-semibold">Graph-Mind</h1>
             <div className="flex space-x-8 text-xl font-semibold text-gray-600">
                 <img src={linkedin} alt="linkedin" />
                 <img src={facebook} alt="facebook" />
                 <img src={twitter} alt="twitter" />
             </div>
+            </div>
+            <br />
+            <br />
+            <div className="flex justify-between">
+        {/* Left: Contact Section */}
+        <div className="w-1/2 px-10 text-2xl">
+            <h2 className="text-3xl font-semibold mb-2 bg-white text-black w-[160px] rounded-lg">Contact Us</h2>
+            <p className="text-lg"><strong>Email:</strong> example@email.com</p>
+            <p className="text-lg"><strong>Phone:</strong> +123 456 7890</p>
+            <p className="text-lg"><strong>Address:</strong> 123 Street, City, Country</p>
         </div>
+
+        {/* Right: Review Section */}
+        <div className="w-1/2">
+            <h2 className="text-2xl font-semibold mb-2">Tell us your experience</h2>
+            <textarea
+                className=" p-2 border rounded-md focus:ring-2 h-20 w-[700px] focus:ring-blue-500"
+                rows="3"
+                placeholder="Write your review..."
+            ></textarea>
+            <button className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-700">
+                Submit Review
+            </button>
+        </div>
+            </div>
+            <br />
+            <br />
+            <div className="flex flex-col items-center justify-center p-5 bg-gray-800 text-white">
+            <p className="text-lg">© 2025 All rights reserved</p>
+            <a href="#" className="text-sm text-gray-400 hover:underline mt-1">Privacy Policy</a>
+        </div>
+
+            </div>
+    
     ) 
 }
 
