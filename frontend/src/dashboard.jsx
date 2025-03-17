@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-
+import DashCard from "../components/DashboardCard";
 function Dashboard() {
   const [data, setData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
-      localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3Y2FiZjI4ZGM5MWZjNGZlYmM1MjIyYyIsImVtYWlsIjoia3Vsa2Fybml2eWFua2F0ZXNoMDZAZ21haWwuY29tIiwibmFtZSI6IlZ5YW5rYXRlc2ggS3Vsa2FybmkiLCJpYXQiOjE3NDIyMjEwMTgsImV4cCI6MTc0MjIyNDYxOH0.FWfpU5PJaoUWPrOt52_vOIKVcJ5JNhmQ3GmKr3MF3bg');
+      localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3Y2FiZjI4ZGM5MWZjNGZlYmM1MjIyYyIsImVtYWlsIjoia3Vsa2Fybml2eWFua2F0ZXNoMDZAZ21haWwuY29tIiwibmFtZSI6IlZ5YW5rYXRlc2ggS3Vsa2FybmkiLCJpYXQiOjE3NDIyMzMzMDksImV4cCI6MTc0MjIzNjkwOX0.qzEumEJtZKPf1ugKFpsSk6u5R9OG07Ta2RArOPSQOes');
       const token = localStorage.getItem('token'); 
 
       try {
@@ -26,18 +26,35 @@ function Dashboard() {
   }, []); 
 
   const userName = data.length > 0 ? data[0].user_name : "Loading...";
+  const diagrams=data;
 
   return (
     <div>
       <Navbar />
       <br /><br />
-      <div className="flex justify-between px-10 py-10">
-        <h1 className="">{userName}</h1>
-        <button className="w-[60px] h-[20px]">
-          Create new Diagram!
+      <div className="flex justify-between space-x-10 p-4 pl-20 pr-[100px]">
+        <h1 className="text-4xl font-bold bg-blue-200 text-black px-4 py-2 rounded-lg">
+            Hi,{userName}!
+        </h1>
+        <button className="border border-black rounded-lg px-20 py-4 text-white bg-black font-bold  text-2xl"
+        style={{textAlign:"left"}}>
+            Create New Diagram!
         </button>
-      </div>
     </div>
+    <br />
+    <br />
+    <br />
+    <br/>  
+   
+    <div className="grid grid-cols-3 gap-y-14 px-10 "style={{alignItems:"center",paddingLeft:"100px"}}>
+    {diagrams.map((diagram, index) => (
+        <DashCard key={index} title={diagram.title} />
+    ))}
+</div>
+
+
+    </div>
+
   );
 }
 function Navbar()
