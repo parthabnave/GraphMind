@@ -1,76 +1,64 @@
-import Box from "../components/InputBox";
-import userIcon from "./assets/user_icon.svg"
-function LoginBoard()
-{
-    return(
-        <>
-        <Navbar/>
-        <br /><br />
-        <Card/>
-        </>
-    )
-}
-function Navbar()
-{
-    return(
-        <div className="flex justify-between items-center p-5 shadow-md">
-            <h1 className="text-5xl font-semibold">Graph-Mind</h1>
-            <div className="flex space-x-8 text-xl font-semibold text-gray-600">
-                <div><a href="#">About us</a></div>
-                <div><a href="#">Services</a></div>
-                <div><a href="#">Use Cases</a></div>
-                <div><a href="#">Pricing</a></div>
-                <div><a href="#">Blog</a></div>
-                <button className="border border-black px-5 pb-2 rounded-lg hover:bg-gray-50 shadow-md">Sign Up</button>
-            </div>
-            
+import { useState } from "react";
+import userIcon from "./assets/user_icon.svg";
+import passwordIcon from "./assets/password.svg";
+
+function Login() {
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [isFocused, setIsFocused] = useState({ email: false, password: false });
+
+  return (
+    <div className="bg-black h-[250px] w-[335px] p-2 rounded-xl">
+      <div className="mt-6" style={{ paddingLeft: "10px" }}>
+
+        {/* Email Field */}
+        <div className="relative w-[300px] mb-3">
+          {!formData.email && !isFocused.email && (
+            <img
+              src={userIcon}
+              alt="User Icon"
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+            />
+          )}
+          <input
+            type="email"
+            placeholder="Email"
+            className="w-full p-2 pl-10 rounded-xl"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onFocus={() => setIsFocused({ ...isFocused, email: true })}
+            onBlur={() => setIsFocused({ ...isFocused, email: false })}
+          />
         </div>
-    ) 
-}
-function InputBoard()
-{
-    return(
-        <div>
-            <Box title={"Email"} img={userIcon} />
-            <br />
-            <Box title={"Password"} img={userIcon} />
-            <br />
+
+        {/* Password Field */}
+        <div className="relative w-[300px] mb-3">
+          {!formData.password && !isFocused.password && (
+            <img
+              src={passwordIcon}
+              alt="Password Icon"
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+            />
+          )}
+          <input
+            type="password"
+            placeholder="Password"
+            className="w-full p-2 pl-10 rounded-xl"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            onFocus={() => setIsFocused({ ...isFocused, password: true })}
+            onBlur={() => setIsFocused({ ...isFocused, password: false })}
+          />
         </div>
-    )
-}
-function OuterCard()
-{
-    return(
-        <div class>
-            <Card/>
-        </div>
-    )
+      </div>
+
+      <br />
+      <div className="flex justify-center">
+        <button className="w-[100px] bg-white py-2 rounded-xl hover:bg-blue-500 transition">
+          Login
+        </button>
+      </div>
+    </div>
+  );
 }
 
-function Card() {
-    return (
-        <div className="flex justify-center">
-            <div className="shadow-xl bg-gray-200 h-[600px]">
-                <br />
-                <div className="flex justify-center">
-                  <button className="bg-black text-white">Login</button>
-                  <button className="bg-black text-white">Signup</button>  
-                </div>
-                <div className="flex justify-center w-[600px] h-[800px] pt-5">
-                  <InputBoard />
-                </div>
-            </div>
-        </div>
-    // <div className="">
-    //     <button>Login</button>
-    //     <button>Signup</button>
-    //   <div className="flex justify-center">
-    //     <div className="flex justify-center bg-black w-[600px] h-[800px] pt-5">
-    //       <InputBoard />
-    //     </div>
-    //   </div>
-    // </div>
-    );
-  }
-  
-export default LoginBoard;
+export default Login;
