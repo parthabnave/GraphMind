@@ -1,8 +1,11 @@
 const router=require('express').Router();
 const UserVerification=require('../../middlewares/user_login');
+const {Diagram}=require("../../../db/User_schema");
 
-router.get('/user', UserVerification, (req, res) => {
-    return res.json({name: req.user.name, email: req.user.email, phn_no: req.user.phn_no  });
+
+router.get('/', UserVerification, async(req, res) => {
+    let history=await Diagram.find({_id:req.user.id});
+    res.json(history);
 });
 
 module.exports=router;

@@ -9,5 +9,20 @@ const UserSchema=new mongoose.Schema({
     password:String,
 });
 
+const DiagramSchema = new mongoose.Schema({
+    title:{type:String, required:true},
+    user:{type:mongoose.Schema.Types.ObjectId, ref:"User"},
+    date_created:{type:Date, default:Date.now},
+    last_updated:{type:Date, default:Date.now},
+    description:{type:String, required:false},
+    diagram:[
+        {
+            type: mongoose.Schema.Types.Mixed
+        }
+    ]
+});
+
+const Diagram=mongoose.model("Diagram",DiagramSchema);
 const User=mongoose.model("User",UserSchema);
-module.exports=User;
+
+module.exports={User,Diagram};
