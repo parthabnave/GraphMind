@@ -1,5 +1,8 @@
 const express=require("express");
 const app=express();
+const cors = require('cors');
+app.use(cors());
+
 const login=require("../backend/routes/login/login");
 const dashboard=require("../backend/routes/dashboard/dashboard");
 const getParsedUML=require("../backend/uml_parser/umlParser");

@@ -11,7 +11,8 @@ const UserSchema=new mongoose.Schema({
 
 const DiagramSchema = new mongoose.Schema({
     title:{type:String, required:true},
-    user:{type:mongoose.Schema.Types.ObjectId, ref:"User"},
+    user_id:{type:mongoose.Schema.Types.ObjectId, ref:"User"},
+    user_name:{type:String, required:true},
     date_created:{type:Date, default:Date.now},
     last_updated:{type:Date, default:Date.now},
     description:{type:String, required:false},
