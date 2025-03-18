@@ -3,25 +3,19 @@ const router = require('express').Router();
 
 const plantUMLCode = `
 @startuml
-interface Coffee {
-    +getDescription(): String
-    +cost(): double
+actor Customer
+actor Admin
+
+rectangle "Online Bookstore System" {
+    Customer --> (Browse Books)
+    Customer --> (Add to Cart)
+    Customer --> (Checkout)
+    Customer --> (Make Payment)
+    Customer --> (Track Order)
+    Admin --> (Manage Inventory)
+    Admin --> (Process Orders)
 }
 
-class BasicCoffee {
-    +getDescription(): String
-    +cost(): double
-}
-
-class MilkDecorator {
-    -coffee: Coffee
-    +MilkDecorator(Coffee)
-    +getDescription(): String
-    +cost(): double
-}
-
-Coffee <|.. BasicCoffee : <<implements>>
-Coffee <|.. MilkDecorator  : <<implements>>
 @enduml
 `;
 router.get("/",(req,res)=>{
