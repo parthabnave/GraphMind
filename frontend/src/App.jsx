@@ -8,31 +8,33 @@ import * as joint from 'jointjs';
 
 const App = () => {
   const paperRef = useRef(null);
+  const umlData = [
+    {
+      elements: [
+        {
+          name: "Online Bookstore System",
+          title: "Online Bookstore System",
+          type: "rectangle",
+          elements: [
+            { left: "Customer", right: "Browse Books", rightType: "UseCase" },
+            { left: "Customer", right: "Add to Cart", rightType: "UseCase" },
+            { left: "Customer", right: "Checkout", rightType: "UseCase" },
+            { left: "Customer", right: "Make Payment", rightType: "UseCase" },
+            { left: "Customer", right: "Track Order", rightType: "UseCase" },
+            { left: "Admin", right: "Manage Inventory", rightType: "UseCase" },
+            { left: "Admin", right: "Process Orders", rightType: "UseCase" },
+          ],
+        },
+      ],
+    },
+  ];
 
-  useEffect(() => {
-    if (!paperRef.current) return; // ✅ Ensure ref exists before using it
-
-    const graph = new joint.dia.Graph();
-
-    const paper = new joint.dia.Paper({
-      el: paperRef.current,
-      model: graph,
-      width: 800,
-      height: 500,
-      gridSize: 10,
-    });
-
-    const rect = new joint.shapes.standard.Rectangle();
-    rect.position(100, 100);
-    rect.resize(100, 50);
-    rect.attr({
-      body: { fill: 'lightblue' },
-      label: { text: 'JointJS', fill: 'black' },
-    });
-    rect.addTo(graph);
-  }, []);
-
-  return <div ref={paperRef} style={{ width: '800px', height: '500px', border: '1px solid #ccc', marginTop: '20px' }} />;
+  return(
+    <div className="App">
+      <h2 style={{ textAlign: "center" }}>UML Diagram</h2>
+      <UMLDiagram umlData={umlData} />
+    </div>
+  )
 };
 
 export default App;
