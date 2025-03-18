@@ -5,6 +5,7 @@ import Dashboard from './dashboard';
 import Dashcard from '../components/DashboardCard';
 import LoginBoard from './AuthCard';
 import * as joint from 'jointjs';
+import UMLDiagram from '../components/UseCaseDiagram';
 
 const App = () => {
   const paperRef = useRef(null);
