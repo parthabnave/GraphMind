@@ -6,17 +6,18 @@ const UMLDiagram = ({ umlData }) => {
   const paperRef = useRef(null);
   const inputRef = useRef(null);
   const [renamedElements, setRenamedElements] = useState(() => {
-    const saved = localStorage.getItem('umlRenamedElements');
+    const saved = localStorage.getItem("umlRenamedElements");
     return saved ? JSON.parse(saved) : {};
   });
   const [elementPositions, setElementPositions] = useState(() => {
-    const saved = localStorage.getItem('umlElementPositions');
+    const saved = localStorage.getItem("umlElementPositions");
     return saved ? JSON.parse(saved) : {};
   });
   const [selectedElement, setSelectedElement] = useState(null);
   const [elementName, setElementName] = useState("");
   const [inputPosition, setInputPosition] = useState({ x: 0, y: 0 });
   const [originalNameMap, setOriginalNameMap] = useState({});
+  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
     if (!umlData || umlData.length === 0) {
@@ -30,20 +31,99 @@ const UMLDiagram = ({ umlData }) => {
     const paper = new joint.dia.Paper({
       el: paperRef.current,
       model: graph,
-      width: 800,
-      height: 600,
+      width: 1500,
+      height: 900,
       gridSize: 10,
       interactive: { linkMove: true, elementMove: true },
+      background: { color: "white" },
     });
 
-    if (!paperRef.current) {
-      console.error("Paper element not found.");
-      return;
-    }
+    paper.scale(zoom, zoom);
 
-    const elementsMap = {};
-    const newOriginalNameMap = {};
-    let x = 100, y = 50;
+    joint.shapes.custom = {};
+
+    // Keep original actor structure
+    joint.shapes.custom.Actor = joint.dia.Element.extend({
+      markup: [
+        '<g class="rotatable">',
+        '<g class="scalable">',
+        '<circle class="head" cx="10" cy="10" r="10"/>',
+        '<line class="body" x1="10" y1="20" x2="10" y2="40"/>',
+        '<line class="arms" x1="0" y1="25" x2="20" y2="25"/>',
+        '<line class="leg-left" x1="10" y1="40" x2="0" y2="60"/>',
+        '<line class="leg-right" x1="10" y1="40" x2="20" y2="60"/>',
+        "</g>",
+        '<text class="label"/>',
+        "</g>",
+      ].join(""),
+      defaults: joint.util.deepSupplement(
+        {
+          type: "custom.Actor",
+          size: { width: 80, height: 110 },
+          attrs: {
+            ".head": { fill: "#ffffa0", stroke: "black", "stroke-width": 2 },
+            ".body, .arms, .leg-left, .leg-right": { stroke: "black", "stroke-width": 2 },
+            ".label": {
+              "text-anchor": "middle",
+              "ref-x": 0.5,
+              "ref-y": 1.2,
+              ref: "g",
+              "y-alignment": "middle",
+              fill: "black",
+              fontSize: 16,
+              fontWeight: "bold",
+              textVerticalAnchor: "middle",
+            },
+          },
+        },
+        joint.dia.Element.prototype.defaults
+      ),
+    });
+
+    // Modified UseCase shape - removed outer ellipse
+    joint.shapes.custom.UseCase = joint.dia.Element.extend({
+      markup: [
+        '<g class="rotatable">',
+        '<g class="scalable">',
+        '<ellipse class="body"/>',
+        '</g>',
+        '<text class="label"/>',
+        '</g>'
+      ].join(''),
+      defaults: joint.util.deepSupplement(
+        {
+          type: "custom.UseCase",
+          size: { width: 250, height: 100 },
+          attrs: {
+            ".body": {
+              fill: "#AED6F1",
+              stroke: "#3498DB",
+              "stroke-width": 0,
+              cx: 0.5,
+              cy: 0.5,
+              rx: 0.5,
+              ry: 0.5
+            },
+            ".label": {
+              "text-anchor": "middle",
+              "ref-x": 0.5,
+              "ref-y": 0.5,
+              ref: ".body",
+              fill: "black",
+              fontSize: 16,
+              fontWeight: "normal",
+              textVerticalAnchor: "middle",
+              textWrap: {
+                width: -40,
+                height: -40,
+                ellipsis: true
+              }
+            }
+          }
+        },
+        joint.dia.Element.prototype.defaults
+      )
+    });
 
     const elementsList = umlData?.[0]?.elements?.[0]?.elements || [];
     if (elementsList.length === 0) {
@@ -51,143 +131,253 @@ const UMLDiagram = ({ umlData }) => {
       return;
     }
 
+    const actors = new Set();
+    const useCases = new Set();
+
+    elementsList.forEach((relation) => {
+      actors.add(relation.left);
+      useCases.add(relation.right);
+    });
+
+    const numUseCases = useCases.size;
+    const useCaseHeight = 100;
+    const useCaseSpacing = 40;
+    const topBottomPadding = 100;
+    const requiredHeight = numUseCases * useCaseHeight + (numUseCases - 1) * useCaseSpacing + topBottomPadding;
+    const cardWidth = 800;
+    const cardHeight = Math.max(650, requiredHeight);
+
+    const systemName = umlData?.[0]?.name || "Student Management System";
+
+    const systemBoundary = new joint.shapes.standard.Rectangle({
+      position: { x: 300, y: 100 },
+      size: { width: cardWidth, height: cardHeight },
+      attrs: {
+        body: {
+          fill: "white",
+          stroke: "black",
+          "stroke-width": 2,
+          rx: 8,
+          ry: 8,
+          opacity: 0.8,
+        },
+        label: {
+          text: systemName,
+          fill: "black",
+          fontSize: 20,
+          fontWeight: "bold",
+          "ref-x": 0.5,
+          "ref-y": 30,
+          "text-anchor": "middle",
+        },
+      },
+    });
+    graph.addCell(systemBoundary);
+
+    const elementsMap = {};
+    const newOriginalNameMap = {};
+
+    const actorStartPositions = {
+      left: { x: 130, y: 220 },
+      right: { x: cardWidth + 380, y: 220 },
+    };
+
+    let actorCount = 0;
+    const totalActors = actors.size;
+    const actorSpacing = cardHeight / (totalActors + 1);
+
+    actors.forEach((actorName) => {
+      const displayName = renamedElements[actorName] || actorName;
+      const isLeftActor = actorCount < totalActors / 2;
+
+      const position =
+        elementPositions[actorName] || {
+          x: isLeftActor ? actorStartPositions.left.x : actorStartPositions.right.x,
+          y: 150 + actorSpacing * (actorCount + 1),
+        };
+
+      const actor = new joint.shapes.custom.Actor({
+        position: position,
+        attrs: { ".label": { text: displayName } },
+      });
+
+      graph.addCell(actor);
+      elementsMap[displayName] = actor;
+      newOriginalNameMap[actor.id] = actorName;
+      actorCount++;
+    });
+
+    const useCaseWidth = 250;
+    const useCaseX = 300 + (cardWidth - useCaseWidth) / 2;
+    let useCaseY = 150;
+
+    let useCaseIndex = 0;
+    useCases.forEach((useCaseName) => {
+      const displayName = renamedElements[useCaseName] || useCaseName;
+
+      const position =
+        elementPositions[useCaseName] || {
+          x: useCaseX,
+          y: useCaseY,
+        };
+
+      const useCase = new joint.shapes.custom.UseCase({
+        position: position,
+        size: { width: useCaseWidth, height: useCaseHeight },
+        attrs: {
+          ".label": { text: displayName }
+        }
+      });
+
+      graph.addCell(useCase);
+      elementsMap[displayName] = useCase;
+      newOriginalNameMap[useCase.id] = useCaseName;
+
+      useCaseY += useCaseHeight + useCaseSpacing;
+      useCaseIndex++;
+    });
+
     elementsList.forEach((relation) => {
       const leftName = renamedElements[relation.left] || relation.left;
       const rightName = renamedElements[relation.right] || relation.right;
 
-      if (!elementsMap[leftName]) {
-        // Check if we have a saved position for this element
-        const savedPosition = elementPositions[relation.left] || { x, y };
-        
-        elementsMap[leftName] = new joint.shapes.standard.Rectangle({
-          position: savedPosition,
-          size: { width: 140, height: 60 },
+      if (elementsMap[leftName] && elementsMap[rightName]) {
+        const link = new joint.shapes.standard.Link({
+          source: { id: elementsMap[leftName].id },
+          target: { id: elementsMap[rightName].id },
           attrs: {
-            body: { fill: "#2ECC71", stroke: "#27AE60", rx: 10, ry: 10 },
-            label: {
-              text: leftName,
-              fill: "black",
-              fontSize: 14,
-              fontWeight: "bold",
+            line: {
+              stroke: "black",
+              "stroke-width": 2,
+              targetMarker: {
+                type: "path",
+                d: "M 12 -6 L 0 0 L 12 6 Z",
+              },
             },
           },
         });
-
-        graph.addCell(elementsMap[leftName]);
-        // Store the original name with element id
-        newOriginalNameMap[elementsMap[leftName].id] = relation.left;
-        
-        // Only increment default position if we didn't use a saved position
-        if (!elementPositions[relation.left]) {
-          y += 120;
-        }
+        graph.addCell(link);
       }
-
-      if (!elementsMap[rightName]) {
-        // Check if we have a saved position for this element
-        const savedPosition = elementPositions[relation.right] || { x: x + 250, y: y - 120 };
-        
-        elementsMap[rightName] = new joint.shapes.standard.Rectangle({
-          position: savedPosition,
-          size: { width: 140, height: 60 },
-          attrs: {
-            body: { fill: "#3498DB", stroke: "#2980B9", rx: 10, ry: 10 },
-            label: {
-              text: rightName,
-              fill: "black",
-              fontSize: 14,
-              fontWeight: "bold",
-            },
-          },
-        });
-
-        graph.addCell(elementsMap[rightName]);
-        // Store the original name with element id
-        newOriginalNameMap[elementsMap[rightName].id] = relation.right;
-      }
-
-      const link = new joint.shapes.standard.Link();
-      link.source(elementsMap[leftName]);
-      link.target(elementsMap[rightName]);
-      link.attr({
-        line: { stroke: "black", strokeWidth: 2, targetMarker: { type: "classic", fill: "black" } },
-      });
-
-      graph.addCell(link);
     });
 
-    // Update original name map
     setOriginalNameMap(newOriginalNameMap);
 
-    // Handle element position changes
-    graph.on('change:position', (element, newPosition) => {
+    graph.on("change:position", (element, newPosition) => {
       const originalName = newOriginalNameMap[element.id];
       if (originalName) {
         const newPositions = { ...elementPositions };
         newPositions[originalName] = newPosition;
         setElementPositions(newPositions);
-        
-        // Save to localStorage
-        localStorage.setItem('umlElementPositions', JSON.stringify(newPositions));
+        localStorage.setItem("umlElementPositions", JSON.stringify(newPositions));
       }
     });
 
-    paper.on('element:pointerdblclick', (elementView) => {
+    paper.on("element:pointerclick", (elementView) => {
       const element = elementView.model;
       setSelectedElement(element);
-      setElementName(element.attr('label/text'));
+
+      let currentText =
+        element.get("type") === "custom.Actor" ? element.attr(".label/text") : element.attr(".label/text");
+
+      setElementName(currentText);
+
       const { x, y } = element.position();
       const { width, height } = element.size();
-      setInputPosition({ x: x + width / 2, y: y + height / 2 });
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 0);
+
+      let inputX = x + width / 2;
+      let inputY = element.get("type") === "custom.Actor" ? y + height + 15 : y + height / 2;
+
+      setInputPosition({ x: inputX * zoom, y: inputY * zoom });
+
+      setTimeout(() => inputRef.current?.focus(), 0);
     });
 
-  }, [umlData, renamedElements, elementPositions]);
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey) {
+        if (e.key === "+" || e.key === "=") {
+          e.preventDefault();
+          const newZoom = Math.min(2, zoom + 0.1);
+          setZoom(newZoom);
+          paper.scale(newZoom, newZoom);
+        } else if (e.key === "-" || e.key === "_") {
+          e.preventDefault();
+          const newZoom = Math.max(0.5, zoom - 0.1);
+          setZoom(newZoom);
+          paper.scale(newZoom, newZoom);
+        } else if (e.key === "0") {
+          e.preventDefault();
+          setZoom(1);
+          paper.scale(1, 1);
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [umlData, renamedElements, elementPositions, zoom]);
 
   useEffect(() => {
-    // Save renamed elements to localStorage whenever they change
-    localStorage.setItem('umlRenamedElements', JSON.stringify(renamedElements));
+    localStorage.setItem("umlRenamedElements", JSON.stringify(renamedElements));
   }, [renamedElements]);
 
-  const handleNameChange = (e) => {
-    setElementName(e.target.value);
-  };
+  const handleNameChange = (e) => setElementName(e.target.value);
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && selectedElement) {
-      // Get the original name for this element
+    if (e.key === "Enter" && selectedElement) {
       const originalName = originalNameMap[selectedElement.id];
-      
       if (originalName) {
-        // Update the element's visual text
-        selectedElement.attr('label/text', elementName);
-        
-        // Store the renamed mapping using the original name as key
-        setRenamedElements((prev) => ({
-          ...prev,
-          [originalName]: elementName,
-        }));
+        selectedElement.attr(".label/text", elementName);
+        setRenamedElements((prev) => ({ ...prev, [originalName]: elementName }));
       }
-      
-      setSelectedElement(null); // Hide input after renaming
+      setSelectedElement(null);
     }
   };
 
-  // Add a button to reset positions
   const resetPositions = () => {
-    localStorage.removeItem('umlElementPositions');
-    localStorage.removeItem('umlRenamedElements');
+    localStorage.removeItem("umlElementPositions");
+    localStorage.removeItem("umlRenamedElements");
     setElementPositions({});
     setRenamedElements({});
-    // Force a re-render
     window.location.reload();
   };
 
   return (
     <div style={{ position: "relative" }}>
-      <div ref={paperRef} style={{ border: "1px solid black", margin: "20px", width: "800px", height: "600px" }} />
+      <div style={{ display: "flex", gap: "10px", margin: "10px 20px", alignItems: "center" }}>
+        <button
+          onClick={resetPositions}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#e74c3c",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "bold",
+          }}
+        >
+          Reset Diagram
+        </button>
+        <div style={{ display: "flex", alignItems: "center", marginLeft: "20px" }}>
+          <span style={{ fontWeight: "bold" }}>Zoom: {Math.round(zoom * 100)}%</span>
+          <span style={{ marginLeft: "10px", fontSize: "12px", color: "#666" }}>
+            (Use Ctrl+Plus/Minus to zoom)
+          </span>
+        </div>
+      </div>
+      <div
+        ref={paperRef}
+        style={{
+          border: "1px solid black",
+          margin: "0 20px 20px 20px",
+          width: "100%",
+          height: "700px",
+          background: "white",
+          overflow: "auto",
+        }}
+      />
       {selectedElement && (
         <input
           ref={inputRef}
@@ -199,25 +389,16 @@ const UMLDiagram = ({ umlData }) => {
             position: "absolute",
             left: inputPosition.x,
             top: inputPosition.y,
-            width: "140px",
+            width: "150px", // Adjusted width
             transform: "translate(-50%, -50%)",
+            zIndex: 999,
+            padding: "4px", // Adjusted padding
+            fontSize: "14px", // Adjusted font size
+            border: "2px solid #3498DB",
+            borderRadius: "4px",
           }}
         />
       )}
-      <button 
-        onClick={resetPositions}
-        style={{
-          margin: "0 20px",
-          padding: "8px 16px",
-          backgroundColor: "#e74c3c",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer"
-        }}
-      >
-        Reset Diagram
-      </button>
     </div>
   );
 };
