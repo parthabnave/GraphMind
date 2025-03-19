@@ -1,30 +1,26 @@
 const { parse } = require('plantuml-parser');
+const axios = require('axios');
 const router = require('express').Router();
 
-const plantUMLCode = `
-@startuml
-actor Customer
-actor Admin
-
-rectangle "Online Bookstore System" {
-    Customer --> (Browse Books)
-    Customer --> (Add to Cart)
-    Customer --> (Checkout)
-    Customer --> (Make Payment)
-    Customer --> (Track Order)
-    Admin --> (Manage Inventory)
-    Admin --> (Process Orders)
-}
-
-@enduml
-`;
-router.get("/",(req,res)=>{
+router.post("/", async (req, res) => {
     try {
-    
-        const parsedData = parse(plantUMLCode);
-        return res.send(JSON.stringify(parsedData, null, 2));
+        const prom = req.body.prompt; 
+
+        const getData = await axios.post('https://graph-mind-api.onrender.com/generate_plantuml', 
+            { prompt: prom }, 
+            {
+                headers: { 'Content-Type': 'application/json' }
+            }
+        );
+
+        const plantUMLCode = getData.data;
+        console.log(plantUMLCode);
+        const requiredData=plantUMLCode.plantuml_code;
+        const parsedData = parse(requiredData);
+        
+        return res.json(parsedData);
     } catch (error) {
-        res.json({"error":error.message});
+        res.json({ "error": error.message });
     }
 });
 
