@@ -7,7 +7,7 @@ function Dashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
-      localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3Y2FiZjI4ZGM5MWZjNGZlYmM1MjIyYyIsImVtYWlsIjoia3Vsa2Fybml2eWFua2F0ZXNoMDZAZ21haWwuY29tIiwibmFtZSI6IlZ5YW5rYXRlc2ggS3Vsa2FybmkiLCJpYXQiOjE3NDIyMzc0ODcsImV4cCI6MTc0MjI0MTA4N30.RTQFSLgJv8HoPzlkMLx8WyR8QpgNiQDVpgbQDs1FnuY');
+      localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3Y2FiZjI4ZGM5MWZjNGZlYmM1MjIyYyIsImVtYWlsIjoia3Vsa2Fybml2eWFua2F0ZXNoMDZAZ21haWwuY29tIiwibmFtZSI6IlZ5YW5rYXRlc2ggS3Vsa2FybmkiLCJpYXQiOjE3NDIzNjc0NTYsImV4cCI6MTc0MjM3MTA1Nn0.bJFHRQ1iiyZTRnLY2SZ5QtIsGaEi3_Odd9YNfHt5ThE');
       const token = localStorage.getItem('token'); 
 
       try {

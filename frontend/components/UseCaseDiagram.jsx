@@ -37,7 +37,7 @@ const UMLDiagram = ({ umlData }) => {
       interactive: { linkMove: true, elementMove: true },
       background: { color: "white" },
     });
-
+    
     paper.scale(zoom, zoom);
 
     joint.shapes.custom = {};
@@ -237,10 +237,16 @@ const UMLDiagram = ({ umlData }) => {
       useCaseIndex++;
     });
 
+    const getArrowStyle = (body) => {
+      if (body === "--") return "5,5"; // Dashed line
+      if (body === "===") return "3,3"; // Dotted (Double Dashed line)
+      return "none"; // Solid line
+    };
+    
     elementsList.forEach((relation) => {
       const leftName = renamedElements[relation.left] || relation.left;
       const rightName = renamedElements[relation.right] || relation.right;
-
+    
       if (elementsMap[leftName] && elementsMap[rightName]) {
         const link = new joint.shapes.standard.Link({
           source: { id: elementsMap[leftName].id },
@@ -249,16 +255,16 @@ const UMLDiagram = ({ umlData }) => {
             line: {
               stroke: "black",
               "stroke-width": 2,
-              targetMarker: {
-                type: "path",
-                d: "M 12 -6 L 0 0 L 12 6 Z",
-              },
+              strokeDasharray: getArrowStyle(relation.leftArrowBody + relation.rightArrowBody),
+              targetMarker: relation.rightArrowHead === ">" ? { type: "path", d: "M 12 -6 L 0 0 L 12 6 Z" } : {},
             },
           },
         });
+    
         graph.addCell(link);
       }
     });
+    
 
     setOriginalNameMap(newOriginalNameMap);
 
