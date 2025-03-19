@@ -409,4 +409,18 @@ const UMLDiagram = ({ umlData }) => {
   );
 };
 
+(function () {
+  let originalAddEventListener = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function (type, listener, options) {
+      if (type === "touchstart" || type === "wheel") {
+          options = options || {};
+          if (typeof options === "object") {
+              options.passive = true;
+          }
+      }
+      originalAddEventListener.call(this, type, listener, options);
+  };
+})();
+
+
 export default UMLDiagram;
