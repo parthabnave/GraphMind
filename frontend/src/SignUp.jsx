@@ -6,12 +6,12 @@ import axios from "axios";
 
 function Signup() {
   const [formData, setFormData] = useState({
-    username: "",
+    name: "",
     email: "",
     password: "",
   });
   const [isFocused, setIsFocused] = useState({
-    username: false,
+    name: false,
     email: false,
     password: false,
   });
@@ -34,7 +34,7 @@ function Signup() {
         
         {/* Username Field */}
         <div className="relative w-[300px] mb-3">
-          {!formData.username && !isFocused.username && (
+          {!formData.name && !isFocused.name && (
             <img
               src={userIcon}
               alt="User  Icon"
@@ -45,11 +45,11 @@ function Signup() {
             type="text"
             placeholder="Username"
             className="w-full p-2 pl-10 rounded-xl"
-            value={formData.username}
-            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-            onFocus={() => setIsFocused({ ...isFocused, username: true })}
-            onBlur={() => setIsFocused({ ...isFocused, username: false })}
-            autoComplete="username"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onFocus={() => setIsFocused({ ...isFocused, name: true })}
+            onBlur={() => setIsFocused({ ...isFocused, name: false })}
+            autoComplete="name"
           />
         </div>
 

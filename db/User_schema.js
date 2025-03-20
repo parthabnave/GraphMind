@@ -5,7 +5,7 @@ mongoose.connect("mongodb+srv://kulkarnivyankatesh06:fYwrN0ZOu0wRSfBJ@cluster0.k
 const UserSchema=new mongoose.Schema({
     name:{type:String, required:true},
     email:{type:String, required:true, unique:true},
-    password:String,
+    password:{type:String,required:true}
 });
 
 const PositionSchema = new mongoose.Schema({

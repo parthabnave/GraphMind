@@ -131,7 +131,7 @@ function Navbar2()
         {/* Left: Contact Section */}
         <div className="w-1/2 px-10 text-2xl">
             <h2 className="text-3xl font-semibold mb-2 bg-white text-black w-[160px] rounded-lg">Contact Us</h2>
-            <p className="text-lg"><strong>Email:</strong> example@email.com</p>
+            <p className="text-lg"><strong>Email:</strong> graphmind@gmail.com</p>
             <p className="text-lg"><strong>Phone:</strong> +123 456 7890</p>
             <p className="text-lg"><strong>Address:</strong> 123 Street, City, Country</p>
         </div>
@@ -140,7 +140,7 @@ function Navbar2()
         <div className="w-1/2">
             <h2 className="text-2xl font-semibold mb-2">Tell us your experience</h2>
             <textarea
-                className=" p-2 border rounded-md focus:ring-2 h-20 w-[700px] focus:ring-blue-500"
+                className=" p-2 text-black border rounded-md focus:ring-2 h-20 w-[700px] focus:ring-blue-500"
                 rows="3"
                 placeholder="Write your review..."
             ></textarea>

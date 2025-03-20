@@ -22,11 +22,12 @@ router.post("/login",async(req,res)=>{
 
 
 router.post("/register",async(req,res)=>{
-    const {name,phn_no, email, password} = req.body;
+    const {name, email, password} = req.body;
+    console.log(req.body);
     const salted=await bcrypt.genSalt(salt);
     const hashed=await bcrypt.hash(password,salted);
     try{
-    const user=new User({name,phn_no,email,password:hashed});
+    const user=new User({name,email,password:hashed});
     await user.save();
     return res.json({msg:"User registered successfully",isRegistered:true});
     }catch(err){
