@@ -7,6 +7,7 @@ import twitter from "./assets/twitter.svg"
 import facebook from "./assets/facebook.svg"
 import linkedin from "./assets/linkedin.svg"
 import arrow from "./assets/Arrow.svg"
+import { useNavigate } from "react-router-dom";
 function Home()
 {
     return(
@@ -38,6 +39,7 @@ function Home()
 
 function IntroCard()
 {
+    const navigate = useNavigate();
     return(
         <div className="grid grid-cols-2 gap-10 px-[40px]">
             <div className="space-y-4">
@@ -54,7 +56,7 @@ function IntroCard()
                 </p>
                 <br />
 
-                <button className="bg-black text-xl text-white px-6 py-3 shadow-xl rounded-lg hover:bg-gray-800">
+                <button className="bg-black text-xl text-white px-6 py-3 shadow-xl rounded-lg hover:bg-gray-800"  onClick={() => navigate("/login")} >
                     Start creating!
                 </button>
             </div>
@@ -160,6 +162,7 @@ function Navbar2()
 }
 
 function Navbar() {
+    const navigate = useNavigate();
     return (
       <div className="flex justify-between items-center p-5 shadow-md">
         <h1 className="text-5xl font-semibold">Graph-Mind</h1>
@@ -169,7 +172,7 @@ function Navbar() {
           <div><a href="#">Use Cases</a></div>
           <div><a href="#">Pricing</a></div>
           <div><a href="#">Blog</a></div>
-          <button className="border border-black px-5 pb-2 rounded-lg hover:bg-gray-50 shadow-md">Sign Up</button>
+          <button className="border border-black px-5 pb-2 rounded-lg hover:bg-gray-50 shadow-md" onClick={()=>navigate("/login")}>Sign Up</button>
         </div>
       </div>
     )

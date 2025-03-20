@@ -2,13 +2,17 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import DashCard from "../components/DashboardCard";
 import userIcon from "./assets/user_icon.svg";
+
 function Dashboard() {
   const [data, setData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
-      localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3Y2FiZjI4ZGM5MWZjNGZlYmM1MjIyYyIsImVtYWlsIjoia3Vsa2Fybml2eWFua2F0ZXNoMDZAZ21haWwuY29tIiwibmFtZSI6IlZ5YW5rYXRlc2ggS3Vsa2FybmkiLCJpYXQiOjE3NDIzNjc0NTYsImV4cCI6MTc0MjM3MTA1Nn0.bJFHRQ1iiyZTRnLY2SZ5QtIsGaEi3_Odd9YNfHt5ThE');
+      // Add authentication token 
+      // here. Replace 'Bearer YOUR_TOKEN' with your actual token.
+      console.log("before getting token");
       const token = localStorage.getItem('token'); 
+      console.log("token:"+token);
 
       try {
         const response = await axios.get("http://localhost:5000/dashboard", {
@@ -25,8 +29,9 @@ function Dashboard() {
 
     fetchData();  
   }, []); 
-
+  
   const userName = data.length > 0 ? data[0].user_name : "Loading...";
+  console.log("username:"+userName);
   const diagrams=data;
 
   return (

@@ -11,13 +11,20 @@ const UMLDiagram = ({ umlData }) => {
   });
   const [elementPositions, setElementPositions] = useState(() => {
     const saved = localStorage.getItem("umlElementPositions");
-    return saved ? JSON.parse(saved) : {};
+    return saved ? JSON.parse(saved) : { position_actors: {}, position_usecases: {} };
   });
   const [selectedElement, setSelectedElement] = useState(null);
   const [elementName, setElementName] = useState("");
   const [inputPosition, setInputPosition] = useState({ x: 0, y: 0 });
   const [originalNameMap, setOriginalNameMap] = useState({});
   const [zoom, setZoom] = useState(1);
+  // Add a ref to track positions to avoid excessive state updates
+  const positionsRef = useRef({ position_actors: {}, position_usecases: {} });
+
+  // Initialize the ref with current state
+  useEffect(() => {
+    positionsRef.current = elementPositions;
+  }, []);
 
   useEffect(() => {
     if (!umlData || umlData.length === 0) {
@@ -42,7 +49,7 @@ const UMLDiagram = ({ umlData }) => {
 
     joint.shapes.custom = {};
 
-    // Keep original actor structure
+    // Define custom shapes
     joint.shapes.custom.Actor = joint.dia.Element.extend({
       markup: [
         '<g class="rotatable">',
@@ -80,7 +87,6 @@ const UMLDiagram = ({ umlData }) => {
       ),
     });
 
-    // Modified UseCase shape - removed outer ellipse
     joint.shapes.custom.UseCase = joint.dia.Element.extend({
       markup: [
         '<g class="rotatable">',
@@ -176,6 +182,11 @@ const UMLDiagram = ({ umlData }) => {
 
     const elementsMap = {};
     const newOriginalNameMap = {};
+    // Create a new positions object to collect all initial positions
+    const newPositions = { 
+      position_actors: { ...positionsRef.current.position_actors }, 
+      position_usecases: { ...positionsRef.current.position_usecases } 
+    };
 
     const actorStartPositions = {
       left: { x: 130, y: 220 },
@@ -190,11 +201,11 @@ const UMLDiagram = ({ umlData }) => {
       const displayName = renamedElements[actorName] || actorName;
       const isLeftActor = actorCount < totalActors / 2;
 
-      const position =
-        elementPositions[actorName] || {
-          x: isLeftActor ? actorStartPositions.left.x : actorStartPositions.right.x,
-          y: 150 + actorSpacing * (actorCount + 1),
-        };
+      // Use stored position if available, otherwise calculate new position
+      const position = newPositions.position_actors[actorName] || {
+        x: isLeftActor ? actorStartPositions.left.x : actorStartPositions.right.x,
+        y: 150 + actorSpacing * (actorCount + 1),
+      };
 
       const actor = new joint.shapes.custom.Actor({
         position: position,
@@ -204,6 +215,10 @@ const UMLDiagram = ({ umlData }) => {
       graph.addCell(actor);
       elementsMap[displayName] = actor;
       newOriginalNameMap[actor.id] = actorName;
+
+      // Store initial position in newPositions
+      newPositions.position_actors[actorName] = position;
+
       actorCount++;
     });
 
@@ -215,11 +230,11 @@ const UMLDiagram = ({ umlData }) => {
     useCases.forEach((useCaseName) => {
       const displayName = renamedElements[useCaseName] || useCaseName;
 
-      const position =
-        elementPositions[useCaseName] || {
-          x: useCaseX,
-          y: useCaseY,
-        };
+      // Use stored position if available, otherwise calculate new position
+      const position = newPositions.position_usecases[useCaseName] || {
+        x: useCaseX,
+        y: useCaseY,
+      };
 
       const useCase = new joint.shapes.custom.UseCase({
         position: position,
@@ -233,9 +248,19 @@ const UMLDiagram = ({ umlData }) => {
       elementsMap[displayName] = useCase;
       newOriginalNameMap[useCase.id] = useCaseName;
 
+      // Store initial position in newPositions
+      newPositions.position_usecases[useCaseName] = position;
+
       useCaseY += useCaseHeight + useCaseSpacing;
       useCaseIndex++;
     });
+
+    // Update ref and state only once with all initial positions
+    positionsRef.current = newPositions;
+    // Only update state if needed
+    if (JSON.stringify(newPositions) !== JSON.stringify(elementPositions)) {
+      setElementPositions(newPositions);
+    }
 
     const getArrowStyle = (body) => {
       if (body === "--") return "5,5"; // Dashed line
@@ -265,26 +290,67 @@ const UMLDiagram = ({ umlData }) => {
       }
     });
     
+    // Optimize rendering performance
+    paper.options.async = true;
+    paper.options.restrictTranslate = true;
+    paper.unfreeze();
 
     setOriginalNameMap(newOriginalNameMap);
 
-    graph.on("change:position", (element, newPosition) => {
+    // Save current state to local storage
+    // This is called once during initialization, not continuously during position changes
+    updateLocalStorage(umlData, newPositions, renamedElements);
+
+    // Debounce function for position updates
+    const debounce = (func, delay) => {
+      let timeoutId;
+      return (...args) => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        timeoutId = setTimeout(() => {
+          func.apply(null, args);
+        }, delay);
+      };
+    };
+
+    // Position update handler (doesn't set state for each change)
+    const handlePositionChange = debounce((element, newPosition) => {
       const originalName = newOriginalNameMap[element.id];
       if (originalName) {
-        const newPositions = { ...elementPositions };
-        newPositions[originalName] = newPosition;
-        setElementPositions(newPositions);
-        localStorage.setItem("umlElementPositions", JSON.stringify(newPositions));
+        const currentPositions = { ...positionsRef.current };
+        
+        // Update the position based on whether it's an actor or use case
+        if (actors.has(originalName)) {
+          currentPositions.position_actors[originalName] = newPosition;
+        } else if (useCases.has(originalName)) {
+          currentPositions.position_usecases[originalName] = newPosition;
+        }
+
+        // Update the ref without triggering state updates
+        positionsRef.current = currentPositions;
+        
+        // Save to localStorage occasionally but don't update state
+        updateLocalStorage(umlData, currentPositions, renamedElements);
       }
+    }, 100);
+
+    // Save positions in batch at a lower frequency to avoid too many state updates
+    const savePositionsToState = debounce(() => {
+      setElementPositions({...positionsRef.current});
+    }, 1000);
+
+    graph.on("change:position", (element, newPosition) => {
+      handlePositionChange(element, newPosition);
+      savePositionsToState();
     });
 
     paper.on("element:pointerclick", (elementView) => {
       const element = elementView.model;
       setSelectedElement(element);
 
-      let currentText =
-        element.get("type") === "custom.Actor" ? element.attr(".label/text") : element.attr(".label/text");
-
+      // Get the current label text based on element type
+      const currentText = element.attr(".label/text") || "";
       setElementName(currentText);
 
       const { x, y } = element.position();
@@ -320,12 +386,21 @@ const UMLDiagram = ({ umlData }) => {
 
     document.addEventListener("keydown", handleKeyDown);
 
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [umlData, renamedElements, elementPositions, zoom]);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      graph.off("change:position"); // Clean up event listener
+    };
+  }, [umlData, renamedElements, zoom]); // Removed elementPositions from dependency array
 
+  // Separate effect to persist renamed elements
   useEffect(() => {
     localStorage.setItem("umlRenamedElements", JSON.stringify(renamedElements));
   }, [renamedElements]);
+
+  // Separate effect to persist element positions
+  useEffect(() => {
+    localStorage.setItem("umlElementPositions", JSON.stringify(elementPositions));
+  }, [elementPositions]);
 
   const handleNameChange = (e) => setElementName(e.target.value);
 
@@ -334,7 +409,9 @@ const UMLDiagram = ({ umlData }) => {
       const originalName = originalNameMap[selectedElement.id];
       if (originalName) {
         selectedElement.attr(".label/text", elementName);
-        setRenamedElements((prev) => ({ ...prev, [originalName]: elementName }));
+        const newRenamedElements = { ...renamedElements, [originalName]: elementName };
+        setRenamedElements(newRenamedElements);
+        updateLocalStorage(umlData, positionsRef.current, newRenamedElements);
       }
       setSelectedElement(null);
     }
@@ -343,9 +420,61 @@ const UMLDiagram = ({ umlData }) => {
   const resetPositions = () => {
     localStorage.removeItem("umlElementPositions");
     localStorage.removeItem("umlRenamedElements");
-    setElementPositions({});
+    setElementPositions({ position_actors: {}, position_usecases: {} });
+    positionsRef.current = { position_actors: {}, position_usecases: {} };
     setRenamedElements({});
     window.location.reload();
+  };
+
+  const updateLocalStorage = (umlData, positions, renamed) => {
+    if (!umlData || !umlData[0] || !umlData[0].elements || !umlData[0].elements[0] || !umlData[0].elements[0].elements) {
+      console.error("Invalid UML data structure");
+      return;
+    }
+    
+    const dataToStore = [];
+
+    // Iterate through the original UML data to create the structure
+    umlData[0].elements[0].elements.forEach((relation) => {
+      const baseData = {
+        left: relation.left,
+        right: relation.right,
+        leftType: "Unknown", // Adjust as needed
+        rightType: "UseCase", // Adjust as needed
+        leftArrowHead: relation.leftArrowHead,
+        rightArrowHead: relation.rightArrowHead,
+        leftArrowBody: relation.leftArrowBody,
+        rightArrowBody: relation.rightArrowBody,
+        leftCardinality: "", // Adjust as needed
+        rightCardinality: "", // Adjust as needed
+        label: "", // Adjust as needed
+        hidden: false // Adjust as needed
+      };
+
+      // Create ChangedData based on renamed elements
+      const changedData = [{
+        left: renamed[relation.left] || relation.left,
+        right: renamed[relation.right] || relation.right,
+        leftType: "Unknown", // Adjust as needed
+        rightType: "UseCase", // Adjust as needed
+        leftArrowHead: "", // Adjust as needed
+        rightArrowHead: ">", // Adjust as needed
+        leftArrowBody: "-", // Adjust as needed
+        rightArrowBody: "-", // Adjust as needed
+        position_actor: positions.position_actors[relation.left] || { x: 0, y: 0 }, // Store the position for actors
+        position_usecase: positions.position_usecases[relation.right] || { x: 0, y: 0 } // Store the position for use cases
+      }];
+
+      dataToStore.push({ BaseData: baseData, ChangedData: changedData });
+    });
+
+    try {
+      localStorage.setItem("umlData", JSON.stringify(dataToStore));
+      // Add console log as requested
+      console.log("Updated localStorage with UML data:", dataToStore);
+    } catch (e) {
+      console.error("Error saving to localStorage:", e);
+    }
   };
 
   return (
@@ -388,18 +517,18 @@ const UMLDiagram = ({ umlData }) => {
         <input
           ref={inputRef}
           type="text"
-          value={elementName}
+          value={elementName || ""}  // Ensure the value is never undefined
           onChange={handleNameChange}
           onKeyPress={handleKeyPress}
           style={{
             position: "absolute",
-            left: inputPosition.x,
-            top: inputPosition.y,
-            width: "150px", // Adjusted width
+            left: `${inputPosition.x}px`,  // Add px unit
+            top: `${inputPosition.y}px`,   // Add px unit
+            width: "150px", 
             transform: "translate(-50%, -50%)",
             zIndex: 999,
-            padding: "4px", // Adjusted padding
-            fontSize: "14px", // Adjusted font size
+            padding: "4px",
+            fontSize: "14px",
             border: "2px solid #3498DB",
             borderRadius: "4px",
           }}
@@ -408,19 +537,5 @@ const UMLDiagram = ({ umlData }) => {
     </div>
   );
 };
-
-(function () {
-  let originalAddEventListener = EventTarget.prototype.addEventListener;
-  EventTarget.prototype.addEventListener = function (type, listener, options) {
-      if (type === "touchstart" || type === "wheel") {
-          options = options || {};
-          if (typeof options === "object") {
-              options.passive = true;
-          }
-      }
-      originalAddEventListener.call(this, type, listener, options);
-  };
-})();
-
 
 export default UMLDiagram;
