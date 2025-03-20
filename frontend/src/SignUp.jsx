@@ -1,30 +1,42 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import userIcon from "./assets/user_icon.svg";
 import emailIcon from "./assets/user_icon.svg"; // Ensure this is the correct icon
 import passwordIcon from "./assets/password.svg";
 import axios from "axios";
 
 function Signup() {
+  const navigate = useNavigate(); // Add this line
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
   });
+
   const [isFocused, setIsFocused] = useState({
     name: false,
     email: false,
     password: false,
   });
+
   const [message, setMessage] = useState("");
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent the default form submission
+    e.preventDefault();
     try {
       const response = await axios.post("http://localhost:5000/getStarted/register", formData);
-      setMessage(response.data.msg); // Show success message
-      // Handle successful registration (e.g., redirect, etc.)
+      setMessage(response.data.msg);
+      localStorage.setItem("token", response.data.token);
+      navigate("/dash"); // Now navigate is defined
     } catch (error) {
-      setMessage(error.response.data.msg); // Show error message
+      if (error.response) {
+        setMessage(error.response.data.msg);
+      } else if (error.request) {
+        setMessage("No response from server. Please check your connection.");
+      } else {
+        setMessage("Error: " + error.message);
+      }
     }
   };
 
@@ -105,7 +117,7 @@ function Signup() {
           Sign Up
         </button>
       </div>
-      {message && <p className="text-center text-red-500">{message}</p>} {/* Display message */}
+      {message && <p className="text-center text-red-500">{message}</p>}
     </form>
   );
 }
