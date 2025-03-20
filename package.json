@@ -4,7 +4,8 @@
   "description": "This project is a AI-based UML design web application that translates user-provided text prompts into UML diagrams. Utilizing an NLP model, the system translates natural language descriptions into PlantUML code and supports automated diagram generation. Users can also customize and fine-tune the generated UML in the application for convenience and accuracy. By combining AI-powered text analysis with dynamic visualization of UML, the platform simplifies the design process for developers and analysts. This application maximizes software modeling effectiveness with UML design made intuitive, accessible, and flexible depending on user requirements.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
