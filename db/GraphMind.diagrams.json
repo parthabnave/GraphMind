@@ -1,134 +1,45 @@
-{
-  "title": "My Use Case Diagram",
-  "user_id": {
-    "$oid": "67cabf28dc91fc4febc5222c"
-  },
-  "user_name": "Vyankatesh",
-  "date_created": {
-    "$date": "2025-03-17T10:00:00.000Z"
-  },
-  "last_updated": {
-    "$date": "2025-03-17T10:00:00.000Z"
-  },
-  "diagram": [
-    {
+[
+  {
       "elements": [
-        {
-          "name": "Coffee",
-          "title": "Coffee",
-          "members": [
-            {
-              "name": "getDescription",
-              "isStatic": false,
-              "accessor": "+",
-              "returnType": "void",
-              "_arguments": ""
-            },
-            {
-              "name": "cost",
-              "isStatic": false,
-              "accessor": "+",
-              "returnType": "void",
-              "_arguments": ""
-            }
-          ],
-          "extends_": [],
-          "implements_": [],
-          "generics": [],
-          "stereotypes": []
-        },
-        {
-          "name": "BasicCoffee",
-          "title": "BasicCoffee",
-          "isAbstract": false,
-          "members": [
-            {
-              "name": "getDescription",
-              "isStatic": false,
-              "accessor": "+",
-              "returnType": "void",
-              "_arguments": ""
-            },
-            {
-              "name": "cost",
-              "isStatic": false,
-              "accessor": "+",
-              "returnType": "void",
-              "_arguments": ""
-            }
-          ],
-          "extends_": [],
-          "implements_": [],
-          "generics": [],
-          "stereotypes": []
-        },
-        {
-          "name": "MilkDecorator",
-          "title": "MilkDecorator",
-          "isAbstract": false,
-          "members": [
-            {
-              "name": "coffee",
-              "isStatic": false,
-              "accessor": "-",
-              "type": "Coffee"
-            },
-            {
-              "name": "MilkDecorator",
-              "isStatic": false,
-              "accessor": "+",
-              "returnType": "void",
-              "_arguments": "Coffee"
-            },
-            {
-              "name": "getDescription",
-              "isStatic": false,
-              "accessor": "+",
-              "returnType": "void",
-              "_arguments": ""
-            },
-            {
-              "name": "cost",
-              "isStatic": false,
-              "accessor": "+",
-              "returnType": "void",
-              "_arguments": ""
-            }
-          ],
-          "extends_": [],
-          "implements_": [],
-          "generics": [],
-          "stereotypes": []
-        },
-        {
-          "left": "Coffee",
-          "right": "BasicCoffee",
-          "leftType": "Unknown",
-          "rightType": "Unknown",
-          "leftArrowHead": "<|",
-          "rightArrowHead": "",
-          "leftArrowBody": ".",
-          "rightArrowBody": ".",
-          "leftCardinality": "",
-          "rightCardinality": "",
-          "label": "<<implements>>",
-          "hidden": false
-        },
-        {
-          "left": "Coffee",
-          "right": "MilkDecorator",
-          "leftType": "Unknown",
-          "rightType": "Unknown",
-          "leftArrowHead": "<|",
-          "rightArrowHead": "",
-          "leftArrowBody": ".",
-          "rightArrowBody": ".",
-          "leftCardinality": "",
-          "rightCardinality": "",
-          "label": "<<implements>>",
-          "hidden": false
-        }
+          {
+              "name": "Library Management System",
+              "title": "Library Management System",
+              "type": "rectangle",
+              "elements": [
+                  {
+                      "name": "Search Books",
+                      "title": "Search Books"
+                  },
+                  {
+                      "name": "Borrow Books",
+                      "title": "Borrow Books"
+                  },
+                  {
+                      "name": "Return Books",
+                      "title": "Return Books"
+                  },
+                  {
+                      "name": "Reserve Books",
+                      "title": "Reserve Books"
+                  },
+                  {
+                      "name": "View Account Details",
+                      "title": "View Account Details"
+                  },
+                  {
+                      "name": "Manage Books",
+                      "title": "Manage Books"
+                  },
+                  {
+                      "name": "Manage Members",
+                      "title": "Manage Members"
+                  },
+                  {
+                      "name": "Generate Reports",
+                      "title": "Generate Reports"
+                  }
+              ]
+          }
       ]
-    }
-  ]
-}
+  }
+]

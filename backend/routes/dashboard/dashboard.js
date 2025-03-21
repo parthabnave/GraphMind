@@ -1,11 +1,13 @@
 const router = require('express').Router();
 const UserVerification = require('../../middlewares/user_login');
-const { UMLModel } = require("../../../db/User_schema");
+const { Diagram } = require("../../../db/User_schema");
 
 router.get('/', UserVerification, async (req, res) => {
     try {
-        console.log("User  ID:", req.user.id); // Log the user ID for debugging
-        let history = await UMLModel.find({ user_id: req.user.id });
+        console.log("User ID:", req.user.id);
+        console.log("Collection name:", Diagram.collection.name);
+
+        let history = await Diagram.find({});
         console.log("Fetched history:", history);
         let nameWithHistory={history,name:req.user.name};
         res.json(nameWithHistory);
