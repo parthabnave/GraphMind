@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as joint from "jointjs";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import Chatbox from "./chatbot";
+
 const createStickFigureShape = () => {
   return joint.dia.Element.define('uml.Actor', {
     attrs: {
@@ -22,11 +25,9 @@ const UseCaseDiagram = ({ data }) => {
   const paperRef = useRef(null);
   const graphRef = useRef(null);
   const systemRef = useRef(null);
-
   const tempSourceRef = useRef(null);
   const [selectedElement, setSelectedElement] = useState(null);
   const [inputValue, setInputValue] = useState("");
-  const [inputPosition, setInputPosition] = useState({ x: 0, y: 0 });
   const [selectedLink, setSelectedLink] = useState(null);
   const [relationshipType, setRelationshipType] = useState("");
   const [isDrawingLink, setIsDrawingLink] = useState(false);
@@ -35,6 +36,12 @@ const UseCaseDiagram = ({ data }) => {
   const [nextActorId, setNextActorId] = useState(1);
   const [serverResponse, setServerResponse] = useState(null);
   const [nextUseCaseId, setNextUseCaseId] = useState(1);
+  const [projectName, setProjectName] = useState(localStorage.getItem("projectName") || "Project Name");
+  const [environmentName, setEnvironmentName] = useState(localStorage.getItem("environmentName") || "System");
+  const [tempEnvironmentName, setTempEnvironmentName] = useState(environmentName);
+  const [isEditingProjectName, setIsEditingProjectName] = useState(false);
+  const [isEditingEnvironmentName, setIsEditingEnvironmentName] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
   const isDrawingLinkRef = useRef(isDrawingLink);
 
   useEffect(() => {
@@ -55,6 +62,9 @@ const UseCaseDiagram = ({ data }) => {
       .filter(el => el.identifier);
 
     localStorage.setItem("useCaseElements", JSON.stringify(elements));
+    localStorage.setItem("projectName", projectName);
+    localStorage.setItem("environmentName", tempEnvironmentName); // Save the temp value permanently
+    setEnvironmentName(tempEnvironmentName); // Sync the saved value
 
     const links = graphRef.current.getLinks().map(link => ({
       source: link.getSourceElement()?.prop('identifier'),
@@ -98,6 +108,29 @@ const UseCaseDiagram = ({ data }) => {
     }
   };
 
+  const calculateSystemBoundary = (useCaseElements) => {
+    if (useCaseElements.length === 0) return { x: 500, y: 100, width: 500, height: 450 };
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    useCaseElements.forEach(element => {
+      const position = element.position();
+      const size = element.size();
+      minX = Math.min(minX, position.x - 30);
+      minY = Math.min(minY, position.y - 30);
+      maxX = Math.max(maxX, position.x + size.width + 30);
+      maxY = Math.max(maxY, position.y + size.height + 30);
+    });
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  };
+
+  const updateSystemBoundary = () => {
+    if (!graphRef.current || !systemRef.current) return;
+    const useCaseElements = graphRef.current.getElements().filter(el => el.prop('type') === 'useCase');
+    const systemBoundary = calculateSystemBoundary(useCaseElements);
+    systemRef.current.position(systemBoundary.x, systemBoundary.y);
+    systemRef.current.resize(systemBoundary.width, systemBoundary.height);
+    systemRef.current.attr({ label: { text: tempEnvironmentName } }); // Use temp value for display
+  };
+
   useEffect(() => {
     if (!paperRef.current) return;
 
@@ -114,13 +147,11 @@ const UseCaseDiagram = ({ data }) => {
       interactive: { linkMove: true, labelMove: true, elementMove: true, vertexAdd: true },
       background: { color: '#f8f9fa' },
     });
-    // localStorage.removeItem("useCaseLinks");
-    // localStorage.removeItem("useCaseElements");
+
     const savedElements = JSON.parse(localStorage.getItem("useCaseElements")) || [];
     const savedLinks = JSON.parse(localStorage.getItem("useCaseLinks")) || [];
     const elements = {};
     const useCaseElements = [];
-    console.log("SetServsrResponse: ",serverResponse);
 
     const createActor = (identifier, position, size, label) => {
       const actor = new UMLActor();
@@ -224,28 +255,13 @@ const UseCaseDiagram = ({ data }) => {
       });
     }
 
-    const calculateSystemBoundary = () => {
-      if (useCaseElements.length === 0) return { x: 500, y: 100, width: 500, height: 450 };
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      useCaseElements.forEach(element => {
-        const position = element.position();
-        const size = element.size();
-        minX = Math.min(minX, position.x - 30);
-        minY = Math.min(minY, position.y - 30);
-        maxX = Math.max(maxX, position.x + size.width + 30);
-        maxY = Math.max(maxY, position.y + size.height + 30);
-      });
-      return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-    };
-
-    const systemBoundary = calculateSystemBoundary();
+    const systemBoundary = calculateSystemBoundary(useCaseElements);
     const system = new joint.shapes.standard.Rectangle();
     system.position(systemBoundary.x, systemBoundary.y);
     system.resize(systemBoundary.width, systemBoundary.height);
-    const diagram_name=localStorage.getItem("projectName");
     system.attr({
       body: { fill: "#f8f9fa", stroke: "#000", strokeWidth: 2 },
-      label: { text: diagram_name, fill: "#000", fontSize: 18, fontWeight: 'bold', textAnchor: 'middle', textVerticalAnchor: 'top', refY: 15 },
+      label: { text: tempEnvironmentName, fill: "#000", fontSize: 18, fontWeight: 'bold', textAnchor: 'middle', textVerticalAnchor: 'top', refY: 15, fontFamily: 'Poppins' },
     });
     system.addTo(graph);
     system.toBack();
@@ -254,16 +270,22 @@ const UseCaseDiagram = ({ data }) => {
     paper.on("element:pointerdown", handleElementClick);
     paper.on("element:pointerdblclick", (elementView) => {
       const element = elementView.model;
-      setSelectedElement(element);
-      const currentText = element.prop('type') === 'actor' ? element.attr('label/text') : element.attr("label/text");
-      setInputValue(currentText);
-      setInputPosition({ x: element.position().x + element.size().width / 2, y: element.position().y - 30 });
-    
+      if (element === systemRef.current) {
+        setIsEditingEnvironmentName(true);
+        setInputValue(tempEnvironmentName);
+        setSelectedElement(null); // Ensure no element is selected
+      } else {
+        setSelectedElement(element);
+        setIsEditingEnvironmentName(false);
+        const currentText = element.prop('type') === 'actor' ? element.attr('label/text') : element.attr("label/text");
+        setInputValue(currentText);
+      }
     });
 
     paper.on("link:pointerclick", (linkView) => {
       setSelectedLink(linkView.model);
       setSelectedElement(null);
+      setIsEditingEnvironmentName(false);
       setRelationshipType(linkView.model.prop('relationshipType') || 'association');
     });
 
@@ -276,6 +298,20 @@ const UseCaseDiagram = ({ data }) => {
       }
       setSelectedElement(null);
       setSelectedLink(null);
+      setIsEditingEnvironmentName(false);
+      setInputValue("");
+    });
+
+    paper.on("element:pointermove", (elementView) => {
+      if (elementView.model.prop('type') === 'useCase') {
+        updateSystemBoundary();
+      }
+    });
+
+    paper.on("element:pointerup", (elementView) => {
+      if (elementView.model.prop('type') === 'useCase') {
+        updateSystemBoundary();
+      }
     });
 
     let isPanning = false;
@@ -300,8 +336,6 @@ const UseCaseDiagram = ({ data }) => {
     };
 
     const handleMouseUp = () => {
-      if (isPanning) {
-      }
       isPanning = false;
       document.body.style.cursor = 'default';
     };
@@ -323,7 +357,7 @@ const UseCaseDiagram = ({ data }) => {
       document.removeEventListener('mouseup', handleMouseUp);
       if (paperRef.current) paperRef.current.removeEventListener('wheel', handleWheel);
     };
-  }, [data]);
+  }, [data, tempEnvironmentName]); // Added tempEnvironmentName to re-render on change
 
   const changeRelationshipType = (type) => {
     if (!selectedLink) return;
@@ -337,23 +371,39 @@ const UseCaseDiagram = ({ data }) => {
       },
       labels: type === "includes" ? [{
         position: 0.5,
-        attrs: { text: { text: '<<include>>', fill: '#000', fontSize: 12, fontStyle: 'italic' }, rect: { fill: 'white', stroke: 'none' } }
+        attrs: { text: { text: '<<include>>', fill: '#000', fontSize: 12, fontStyle: 'italic', fontFamily: 'Poppins' }, rect: { fill: 'white', stroke: 'none' } }
       }] : type === "extends" ? [{
         position: 0.5,
-        attrs: { text: { text: '<<extends>>', fill: '#000', fontSize: 12, fontStyle: 'italic' }, rect: { fill: 'white', stroke: 'none' } }
+        attrs: { text: { text: '<<extends>>', fill: '#000', fontSize: 12, fontStyle: 'italic', fontFamily: 'Poppins' }, rect: { fill: 'white', stroke: 'none' } }
       }] : []
     });
     setSelectedLink(null);
   };
 
   const handleRename = (e) => {
-    if (e.key === "Enter" && selectedElement) {
-      if (selectedElement.prop('type') === 'actor') {
-        selectedElement.attr('label/text', inputValue);
-      } else {
-        selectedElement.attr("label/text", inputValue);
+    if (e.key === "Enter") {
+      if (selectedElement) {
+        if (selectedElement.prop('type') === 'actor') {
+          selectedElement.attr('label/text', inputValue);
+        } else {
+          selectedElement.attr("label/text", inputValue);
+        }
+        setInputValue("");
+        setSelectedElement(null);
+        updateSystemBoundary();
+      } else if (isEditingEnvironmentName) {
+        setTempEnvironmentName(inputValue); // Update temporary value
+        setInputValue("");
+        setIsEditingEnvironmentName(false);
+        updateSystemBoundary();
       }
-      setSelectedElement(null);
+    }
+  };
+
+  const handleProjectNameChange = (e) => {
+    if (e.key === "Enter") {
+      setProjectName(e.target.value);
+      setIsEditingProjectName(false);
     }
   };
 
@@ -364,7 +414,7 @@ const UseCaseDiagram = ({ data }) => {
     const newActor = new UMLActor();
     newActor.position(400, 300);
     newActor.resize(120, 120);
-    newActor.attr({ label: { text: `Actor ${nextActorId}`, refY: -15 } });
+    newActor.attr({ label: { text: `Actor ${nextActorId}`, refY: -15, fontFamily: 'Poppins' } });
     newActor.prop('identifier', actorId);
     newActor.prop('type', 'actor');
     newActor.addTo(graphRef.current);
@@ -379,24 +429,15 @@ const UseCaseDiagram = ({ data }) => {
     newUseCase.resize(250, 60);
     newUseCase.attr({
       body: { fill: "#d1ecf1", stroke: "#000", strokeWidth: 1.5 },
-      label: { text:` New Use Case ${nextUseCaseId}`, fill: "#000", fontSize: 16 },
+      label: { text: `New Use Case ${nextUseCaseId}`, fill: "#000", fontSize: 16, fontFamily: 'Poppins' },
     });
     newUseCase.prop('identifier', useCaseId);
     newUseCase.prop('type', 'useCase');
     newUseCase.addTo(graphRef.current);
     setNextUseCaseId(nextUseCaseId + 1);
     updateSystemBoundary();
+  };
 
-  };
-  const updateSystemBoundary = () => {
-    const systemBoundary = calculateSystemBoundary();
-    if (systemRef.current) {
-      systemRef.current.position(systemBoundary.x, systemBoundary.y);
-      systemRef.current.resize(systemBoundary.width, systemBoundary.height);
-    }
-  };
-  
-  
   const startConnection = () => {
     setIsDrawingLink(true);
     setSourceElement(null);
@@ -409,6 +450,7 @@ const UseCaseDiagram = ({ data }) => {
       connectedLinks.forEach(link => link.remove());
       selectedElement.remove();
       setSelectedElement(null);
+      setInputValue("");
       updateSystemBoundary();
     } else if (selectedLink) {
       selectedLink.remove();
@@ -416,9 +458,28 @@ const UseCaseDiagram = ({ data }) => {
     }
   };
 
+  const exportToPDF = () => {
+    html2canvas(paperRef.current).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('l', 'px', [1500, 900]);
+      pdf.addImage(imgData, 'PNG', 0, 0, 1500, 900);
+      pdf.save(`${projectName}.pdf`);
+    });
+    setShowExportDropdown(false);
+  };
+
+  const exportToPNG = () => {
+    html2canvas(paperRef.current).then(canvas => {
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `${projectName}.png`;
+      link.click();
+    });
+    setShowExportDropdown(false);
+  };
+
   const handleServerResponse = (data) => {
     console.log("Data received in parent:", data);
-    // Perform actions with the data
   };
 
   return (
@@ -445,28 +506,59 @@ const UseCaseDiagram = ({ data }) => {
       ></div>
 
       <div style={{
-        width: "120px",
+        width: "220px",
         height: "900px",
         backgroundColor: "#ffffff",
         borderLeft: "1px solid #dee2e6",
-        padding: "15px",
+        padding: "20px",
         display: "flex",
         flexDirection: "column",
-        gap: "15px",
-        boxShadow: "-2px 0 4px rgba(0,0,0,0.05)"
+        gap: "20px",
+        boxShadow: "-2px 0 4px rgba(0,0,0,0.05)",
+        position: "relative"
       }}>
-        <h3 style={{ 
-          textAlign: "center", 
-          margin: "0 0 10px 0", 
-          fontSize: "16px",
-          color: "#333",
-          fontWeight: "600"
-        }}>Tools</h3>
+        <div 
+          onDoubleClick={() => setIsEditingProjectName(true)}
+          style={{ 
+            textAlign: "center", 
+            margin: "0 0 15px 0", 
+            fontSize: "16px",
+            color: "#333",
+            fontWeight: "600",
+            fontFamily: 'Poppins, sans-serif',
+            cursor: "pointer"
+          }}
+        >
+          {isEditingProjectName ? (
+            <input
+              type="text"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              onKeyDown={handleProjectNameChange}
+              onBlur={() => setIsEditingProjectName(false)}
+              style={{
+                padding: "5px",
+                border: "2px solid #007bff",
+                borderRadius: "4px",
+                backgroundColor: "white",
+                width: "100%",
+                textAlign: "center",
+                fontSize: "16px",
+                fontFamily: 'Poppins, sans-serif',
+                fontWeight: "600",
+                outline: "none"
+              }}
+              autoFocus
+            />
+          ) : (
+            projectName
+          )}
+        </div>
         
         <button
           onClick={() => { setToolbarMode('actor'); addActor(); }}
           style={{ 
-            padding: "10px 5px", 
+            padding: "12px 8px", 
             background: toolbarMode === 'actor' ? '#007bff' : '#ffffff', 
             color: toolbarMode === 'actor' ? 'white' : '#333', 
             border: "1px solid #dee2e6", 
@@ -475,26 +567,34 @@ const UseCaseDiagram = ({ data }) => {
             display: "flex", 
             flexDirection: "column", 
             alignItems: "center", 
-            gap: "6px",
+            gap: "8px",
             fontWeight: "500",
+            fontFamily: 'Poppins, sans-serif',
+            fontSize: "14px",
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
             transition: "all 0.2s ease"
           }}
         >
-          <div style={{ width: "30px", height: "40px", position: "relative", margin: "0 auto" }}>
-            <div style={{ position: "absolute", top: "0", left: "12px", width: "10px", height: "10px", borderRadius: "50%", border: "2px solid #000" }}></div>
-            <div style={{ position: "absolute", top: "12px", left: "14px", width: "2px", height: "15px", backgroundColor: "#000" }}></div>
-            <div style={{ position: "absolute", top: "18px", left: "5px", width: "20px", height: "2px", backgroundColor: "#000" }}></div>
-            <div style={{ position: "absolute", top: "27px", left: "8px", width: "8px", height: "2px", backgroundColor: "#000", transform: "rotate(45deg)" }}></div>
-            <div style={{ position: "absolute", top: "27px", left: "14px", width: "8px", height: "2px", backgroundColor: "#000", transform: "rotate(-45deg)" }}></div>
-          </div>
+          <svg 
+            width="40" 
+            height="50" 
+            viewBox="-20 -25 40 60" 
+            style={{ margin: "0 auto" }}
+          >
+            <path 
+              d="M 0 -15 m 0 -9 a 9 9 0 1 0 0.1 0 Z M 0 -15 L 0 15 M -15 0 L 15 0 M -12 35 L 0 15 L 12 35" 
+              stroke="#000" 
+              strokeWidth="2.5" 
+              fill="none" 
+            />
+          </svg>
           <span>Actor</span>
         </button>
         
         <button
           onClick={() => { setToolbarMode('useCase'); addUseCase(); }}
           style={{ 
-            padding: "10px 5px", 
+            padding: "12px 8px", 
             background: toolbarMode === 'useCase' ? '#007bff' : '#ffffff', 
             color: toolbarMode === 'useCase' ? 'white' : '#333', 
             border: "1px solid #dee2e6", 
@@ -503,20 +603,22 @@ const UseCaseDiagram = ({ data }) => {
             display: "flex", 
             flexDirection: "column", 
             alignItems: "center", 
-            gap: "6px",
+            gap: "8px",
             fontWeight: "500",
+            fontFamily: 'Poppins, sans-serif',
+            fontSize: "14px",
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
             transition: "all 0.2s ease"
           }}
         >
-          <div style={{ width: "40px", height: "25px", border: "2px solid #000", borderRadius: "50%", margin: "0 auto", backgroundColor: "#d1ecf1" }}></div>
+          <div style={{ width: "50px", height: "30px", border: "2px solid #000", borderRadius: "50%", margin: "0 auto", backgroundColor: "#d1ecf1" }}></div>
           <span>Use Case</span>
         </button>
         
         <button
           onClick={startConnection}
           style={{ 
-            padding: "10px 5px", 
+            padding: "12px 8px", 
             background: toolbarMode === 'link' ? '#007bff' : '#ffffff', 
             color: toolbarMode === 'link' ? 'white' : '#333', 
             border: "1px solid #dee2e6", 
@@ -525,23 +627,47 @@ const UseCaseDiagram = ({ data }) => {
             display: "flex", 
             flexDirection: "column", 
             alignItems: "center", 
-            gap: "6px",
+            gap: "8px",
             fontWeight: "500",
+            fontFamily: 'Poppins, sans-serif',
+            fontSize: "14px",
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
             transition: "all 0.2s ease"
           }}
         >
-          <div style={{ width: "40px", height: "25px", position: "relative", margin: "0 auto" }}>
-            <div style={{ position: "absolute", top: "12px", left: "0", width: "40px", height: "2px", backgroundColor: "#000" }}></div>
-            <div style={{ position: "absolute", top: "8px", right: "0", width: "8px", height: "8px", borderTop: "2px solid #000", borderRight: "2px solid #000", transform: "rotate(45deg)" }}></div>
+          <div style={{ width: "50px", height: "30px", position: "relative", margin: "0 auto" }}>
+            <div style={{ position: "absolute", top: "14px", left: "0", width: "50px", height: "2px", backgroundColor: "#000" }}></div>
+            <div style={{ position: "absolute", top: "9px", right: "0", width: "10px", height: "10px", borderTop: "2px solid #000", borderRight: "2px solid #000", transform: "rotate(45deg)" }}></div>
           </div>
           <span>Connect</span>
         </button>
+
+        {(selectedElement || isEditingEnvironmentName) && (
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleRename}
+            placeholder={selectedElement ? "Enter new name" : "Enter environment name"}
+            style={{
+              padding: "10px",
+              border: "2px solid #007bff",
+              borderRadius: "4px",
+              backgroundColor: "white",
+              width: "100%",
+              textAlign: "center",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+              fontSize: "13px",
+              fontFamily: 'Poppins, sans-serif'
+            }}
+            autoFocus
+          />
+        )}
         
         <button
           onClick={saveGraphState}
           style={{ 
-            padding: "10px 5px", 
+            padding: "12px 8px", 
             background: '#28a745', 
             color: 'white', 
             border: "1px solid #dee2e6", 
@@ -550,8 +676,10 @@ const UseCaseDiagram = ({ data }) => {
             display: "flex", 
             flexDirection: "column", 
             alignItems: "center", 
-            gap: "6px",
+            gap: "8px",
             fontWeight: "500",
+            fontFamily: 'Poppins, sans-serif',
+            fontSize: "14px",
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
             transition: "all 0.2s ease"
           }}
@@ -562,7 +690,7 @@ const UseCaseDiagram = ({ data }) => {
         <button
           onClick={deleteElement}
           style={{ 
-            padding: "10px 5px", 
+            padding: "12px 8px", 
             background: '#dc3545', 
             color: 'white', 
             border: "1px solid #dee2e6", 
@@ -571,46 +699,96 @@ const UseCaseDiagram = ({ data }) => {
             display: "flex", 
             flexDirection: "column", 
             alignItems: "center", 
-            gap: "6px",
+            gap: "8px",
             fontWeight: "500",
+            fontFamily: 'Poppins, sans-serif',
+            fontSize: "14px",
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-            transition: "all 0.2s ease",
-            marginTop: "1/2"
+            transition: "all 0.2s ease"
           }}
         >
-          <div style={{ width: "25px", height: "25px", position: "relative", margin: "0 auto" }}>
-            <div style={{ position: "absolute", top: "0", left: "11px", width: "3px", height: "25px", backgroundColor: "#fff", transform: "rotate(45deg)" }}></div>
-            <div style={{ position: "absolute", top: "0", left: "11px", width: "3px", height: "25px", backgroundColor: "#fff", transform: "rotate(-45deg)" }}></div>
-          </div>
           <span>Delete</span>
         </button>
         <Chatbox onResponse={(data) => setServerResponse(data)} />
       </div>
 
-      {selectedElement && (
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleRename}
+      <div style={{
+        position: "absolute",
+        top: "10px",
+        right: "10px",
+        zIndex: "10"
+      }}>
+        <button
+          onClick={() => setShowExportDropdown(!showExportDropdown)}
           style={{
-            position: "absolute",
-            left: inputPosition.x,
-            top: inputPosition.y,
-            zIndex: 10,
-            padding: "8px",
-            border: "2px solid #007bff",
-            borderRadius: "4px",
-            backgroundColor: "white",
-            width: "250px",
-            textAlign: "center",
-            transform: "translateX(-50%)",
-            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-            fontSize: "14px"
+            padding: "8px 16px",
+            background: "#007bff",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontFamily: 'Poppins, sans-serif',
+            fontWeight: "500",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            transition: "all 0.2s ease"
           }}
-          autoFocus
-        />
-      )}
+        >
+          Export
+        </button>
+        {showExportDropdown && (
+          <div style={{
+            position: "absolute",
+            top: "100%",
+            right: "0",
+            marginTop: "5px",
+            backgroundColor: "white",
+            border: "1px solid #dee2e6",
+            borderRadius: "6px",
+            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+            display: "flex",
+            flexDirection: "column",
+            width: "100px"
+          }}>
+            <button
+              onClick={exportToPDF}
+              style={{
+                padding: "8px",
+                background: "white",
+                color: "#333",
+                border: "none",
+                borderBottom: "1px solid #dee2e6",
+                cursor: "pointer",
+                fontFamily: 'Poppins, sans-serif',
+                fontWeight: "500",
+                textAlign: "left",
+                transition: "background 0.2s ease"
+              }}
+              onMouseOver={(e) => e.target.style.background = '#f1f3f5'}
+              onMouseOut={(e) => e.target.style.background = 'white'}
+            >
+              PDF
+            </button>
+            <button
+              onClick={exportToPNG}
+              style={{
+                padding: "8px",
+                background: "white",
+                color: "#333",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: 'Poppins, sans-serif',
+                fontWeight: "500",
+                textAlign: "left",
+                transition: "background 0.2s ease"
+              }}
+              onMouseOver={(e) => e.target.style.background = '#f1f3f5'}
+              onMouseOut={(e) => e.target.style.background = 'white'}
+            >
+              PNG
+            </button>
+          </div>
+        )}
+      </div>
 
       {selectedLink && (
         <div style={{
@@ -618,7 +796,7 @@ const UseCaseDiagram = ({ data }) => {
           left: "50%",
           bottom: "20px",
           transform: "translateX(-50%)",
-          zIndex: 10,
+          zIndex: "10",
           padding: "15px",
           backgroundColor: "white",
           borderRadius: "8px",
@@ -633,7 +811,8 @@ const UseCaseDiagram = ({ data }) => {
             textAlign: "center",
             color: "#333",
             fontSize: "16px",
-            fontWeight: "500"
+            fontWeight: "500",
+            fontFamily: 'Poppins, sans-serif'
           }}>Set Relationship Type:</h3>
           <div style={{ display: "flex", gap: "10px" }}>
             <button 
@@ -646,7 +825,9 @@ const UseCaseDiagram = ({ data }) => {
                 borderRadius: "4px", 
                 cursor: "pointer",
                 boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                transition: "all 0.2s ease"
+                transition: "all 0.2s ease",
+                fontFamily: 'Poppins, sans-serif',
+                fontWeight: "500"
               }}>
               Association
             </button>
@@ -660,7 +841,9 @@ const UseCaseDiagram = ({ data }) => {
                 borderRadius: "4px", 
                 cursor: "pointer",
                 boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                transition: "all 0.2s ease"
+                transition: "all 0.2s ease",
+                fontFamily: 'Poppins, sans-serif',
+                fontWeight: "500"
               }}>
               Include
             </button>
@@ -674,7 +857,9 @@ const UseCaseDiagram = ({ data }) => {
                 borderRadius: "4px", 
                 cursor: "pointer",
                 boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                transition: "all 0.2s ease"
+                transition: "all 0.2s ease",
+                fontFamily: 'Poppins, sans-serif',
+                fontWeight: "500"
               }}>
               Extend
             </button>
@@ -690,7 +875,9 @@ const UseCaseDiagram = ({ data }) => {
               cursor: "pointer", 
               marginTop: "5px",
               boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-              transition: "all 0.2s ease"
+              transition: "all 0.2s ease",
+              fontFamily: 'Poppins, sans-serif',
+              fontWeight: "500"
             }}>
             Cancel
           </button>
@@ -703,14 +890,15 @@ const UseCaseDiagram = ({ data }) => {
           top: "15px",
           left: "50%",
           transform: "translateX(-50%)",
-          zIndex: 10,
+          zIndex: "10",
           padding: "10px 20px",
           backgroundColor: "rgba(0, 123, 255, 0.95)",
           color: "white",
           borderRadius: "6px",
           boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
           fontSize: "14px",
-          fontWeight: "500"
+          fontWeight: "500",
+          fontFamily: 'Poppins, sans-serif'
         }}>
           {sourceElement ? "Click target element to connect" : "Click source element to start"}
         </div>
