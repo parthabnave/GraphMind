@@ -124,11 +124,11 @@
 //       ],
 //     },
 //   ];
-  
+// //  
 //   // Convert and log the result
 //   const convertedData = convertPlantUMLToDiagram(plantUMLData);
 //   console.log(JSON.stringify(["entities": convertedData.entities, "relationships": convertedData.relationships], null, 2));
   
 //   // Export the function
 //   module.exports = { convertPlantUMLToDiagram }; // For Node.js
-//   // export default convertPlantUMLToDiagram; // For ES6 modules
+//   export default convertPlantUMLToDiagram; // For ES6 modules

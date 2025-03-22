@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as joint from "jointjs";
-// import Chatbox from "./chatbot";
+import Chatbox from "./chatbot";
 const createStickFigureShape = () => {
   return joint.dia.Element.define('uml.Actor', {
     attrs: {
@@ -31,6 +31,7 @@ const UseCaseDiagram = ({ data }) => {
   const [sourceElement, setSourceElement] = useState(null);
   const [toolbarMode, setToolbarMode] = useState(null);
   const [nextActorId, setNextActorId] = useState(1);
+  const [serverResponse, setServerResponse] = useState(null);
   const [nextUseCaseId, setNextUseCaseId] = useState(1);
   const isDrawingLinkRef = useRef(isDrawingLink);
 
@@ -116,6 +117,7 @@ const UseCaseDiagram = ({ data }) => {
     const savedLinks = JSON.parse(localStorage.getItem("useCaseLinks")) || [];
     const elements = {};
     const useCaseElements = [];
+    console.log("SetServsrResponse: ",serverResponse);
 
     const createActor = (identifier, position, size, label) => {
       const actor = new UMLActor();
@@ -397,6 +399,11 @@ const UseCaseDiagram = ({ data }) => {
     }
   };
 
+  const handleServerResponse = (data) => {
+    console.log("Data received in parent:", data);
+    // Perform actions with the data
+  };
+
   return (
     <div style={{ 
       position: "relative", 
@@ -560,6 +567,7 @@ const UseCaseDiagram = ({ data }) => {
           </div>
           <span>Delete</span>
         </button>
+        <Chatbox onResponse={(data) => setServerResponse(data)} />
       </div>
 
       {selectedElement && (
