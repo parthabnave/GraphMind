@@ -112,7 +112,8 @@ const UseCaseDiagram = ({ data }) => {
       interactive: { linkMove: true, labelMove: true, elementMove: true, vertexAdd: true },
       background: { color: '#f8f9fa' },
     });
-
+    // localStorage.removeItem("useCaseLinks");
+    // localStorage.removeItem("useCaseElements");
     const savedElements = JSON.parse(localStorage.getItem("useCaseElements")) || [];
     const savedLinks = JSON.parse(localStorage.getItem("useCaseLinks")) || [];
     const elements = {};
@@ -239,9 +240,10 @@ const UseCaseDiagram = ({ data }) => {
     const system = new joint.shapes.standard.Rectangle();
     system.position(systemBoundary.x, systemBoundary.y);
     system.resize(systemBoundary.width, systemBoundary.height);
+    const diagram_name=localStorage.getItem("projectName");
     system.attr({
       body: { fill: "#f8f9fa", stroke: "#000", strokeWidth: 2 },
-      label: { text: "Restaurant Management System", fill: "#000", fontSize: 18, fontWeight: 'bold', textAnchor: 'middle', textVerticalAnchor: 'top', refY: 15 },
+      label: { text: diagram_name, fill: "#000", fontSize: 18, fontWeight: 'bold', textAnchor: 'middle', textVerticalAnchor: 'top', refY: 15 },
     });
     system.addTo(graph);
     system.toBack();

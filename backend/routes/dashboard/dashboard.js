@@ -4,11 +4,11 @@ const { Diagram } = require("../../../db/User_schema");
 
 router.get('/', UserVerification, async (req, res) => {
     try {
-        console.log("User ID:", req.user.id);
-        console.log("Collection name:", Diagram.collection.name);
+        // console.log("User ID:", req.user.id);
+        // console.log("Collection name:", Diagram.collection.name);
 
         let history = await Diagram.find({});
-        console.log("Fetched history:", history);
+        // console.log("Fetched history:", history);
         let nameWithHistory={history,name:req.user.name};
         res.json(nameWithHistory);
     } catch (error) {

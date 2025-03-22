@@ -15,6 +15,7 @@ class Chatbox extends React.Component {
 
   handleSendMessage = async () => {
     const { inputValue } = this.state;
+    console.log("input",inputValue);
     if (inputValue.trim()) {
       try {
         const response = await axios.post('http://localhost:5000/getParsedUML', {
@@ -22,7 +23,7 @@ class Chatbox extends React.Component {
         });
 
         console.log('Server Response:', response.data);
-        this.props.onResponse(response.data); // Send data to Dashboard
+        // this.props.onResponse(response.data); // Send data to Dashboard
         this.setState({ inputValue: '' });
       } catch (error) {
         console.error('Error sending message:', error);
@@ -45,11 +46,11 @@ class Chatbox extends React.Component {
           type="text"
           value={inputValue}
           onChange={this.handleInputChange}
-          onKeyPress={this.handleKeyPress}
+          onKeyDown={this.handleKeyPress}
           placeholder="Type your message..."
           style={{ flex: 1, padding: '16px', borderRadius: '8px', border: '1px solid #ccc' }}
         />
-        <button onClick={this.handleSendMessage} style={{ marginLeft: '8px', padding: '16px', backgroundColor: '#3b82f6', color: '#fff', borderRadius: '8px', border: 'none' }}>Send</button>
+        <button onClick={()=>{this.handleSendMessage()}} style={{ marginLeft: '8px', padding: '16px', backgroundColor: '#3b82f6', color: '#fff', borderRadius: '8px', border: 'none' }}>Send</button>
       </div>
     );
   }

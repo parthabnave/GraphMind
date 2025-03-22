@@ -36,7 +36,7 @@ function Dashboard() {
 const handleSearch = async (id) => {
     try {
         const diagram_id = data.history[id]._id;
-        console.log(diagram_id);
+        console.log("diagram id",diagram_id);
 
         const response = await axios.post(`http://localhost:5000/getdata`, {
             diagram_id: diagram_id,
@@ -45,10 +45,13 @@ const handleSearch = async (id) => {
         console.log("Search Result:", response.data);
 
         if (response.data.moveOn) {
+          localStorage.setItem("projectName",response.data.formattedData.title);
+          localStorage.setItem("useCaseElements",JSON.stringify(response.data.formattedData.entities));
+          localStorage.setItem("useCaseLinks",JSON.stringify(response.data.formattedData.relationships));
             navigate("/UseCaseEditor", { 
                 state: { 
-                    entities: response.data.diagram.entities,
-                    relationships: response.data.diagram.relationships 
+                    entities: response.data.formattedData.entities,
+                    relationships: response.data.formattedData.relationships 
                 } 
             });
         }
@@ -59,6 +62,7 @@ const handleSearch = async (id) => {
 
   const userName = data.name; 
   const diagrams = data.history || [];  
+  // console.log("diagram:",diagrams);
 
   return (
     <div>

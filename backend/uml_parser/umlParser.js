@@ -14,13 +14,13 @@ router.post("/", async (req, res) => {
         );
 
         const plantUMLCode = getData.data;
-        console.log(plantUMLCode);
+        // console.log(plantUMLCode);
         const requiredData=plantUMLCode.plantuml_code;
         const parsedData = parse(requiredData);
-        
+        // console.log("parsedData",parsedData);
         return res.json(parsedData);
     } catch (error) {
-        res.json({ "error": error.message });
+        return res.json({ "error": error.message });
     }
 });
 
