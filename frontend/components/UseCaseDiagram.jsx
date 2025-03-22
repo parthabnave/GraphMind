@@ -21,6 +21,8 @@ const createStickFigureShape = () => {
 const UseCaseDiagram = ({ data }) => {
   const paperRef = useRef(null);
   const graphRef = useRef(null);
+  const systemRef = useRef(null);
+
   const tempSourceRef = useRef(null);
   const [selectedElement, setSelectedElement] = useState(null);
   const [inputValue, setInputValue] = useState("");
@@ -247,6 +249,7 @@ const UseCaseDiagram = ({ data }) => {
     });
     system.addTo(graph);
     system.toBack();
+    systemRef.current = system;
 
     paper.on("element:pointerdown", handleElementClick);
     paper.on("element:pointerdblclick", (elementView) => {
@@ -255,6 +258,7 @@ const UseCaseDiagram = ({ data }) => {
       const currentText = element.prop('type') === 'actor' ? element.attr('label/text') : element.attr("label/text");
       setInputValue(currentText);
       setInputPosition({ x: element.position().x + element.size().width / 2, y: element.position().y - 30 });
+    
     });
 
     paper.on("link:pointerclick", (linkView) => {
@@ -381,8 +385,18 @@ const UseCaseDiagram = ({ data }) => {
     newUseCase.prop('type', 'useCase');
     newUseCase.addTo(graphRef.current);
     setNextUseCaseId(nextUseCaseId + 1);
-  };
+    updateSystemBoundary();
 
+  };
+  const updateSystemBoundary = () => {
+    const systemBoundary = calculateSystemBoundary();
+    if (systemRef.current) {
+      systemRef.current.position(systemBoundary.x, systemBoundary.y);
+      systemRef.current.resize(systemBoundary.width, systemBoundary.height);
+    }
+  };
+  
+  
   const startConnection = () => {
     setIsDrawingLink(true);
     setSourceElement(null);
@@ -395,6 +409,7 @@ const UseCaseDiagram = ({ data }) => {
       connectedLinks.forEach(link => link.remove());
       selectedElement.remove();
       setSelectedElement(null);
+      updateSystemBoundary();
     } else if (selectedLink) {
       selectedLink.remove();
       setSelectedLink(null);
