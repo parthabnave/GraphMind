@@ -15,15 +15,22 @@ class Chatbox extends React.Component {
 
   handleSendMessage = async () => {
     const { inputValue } = this.state;
-    console.log("input", inputValue);
+    // console.log("input", inputValue);
+
     if (inputValue.trim()) {
       try {
+        console.log("before req");
         const response = await axios.post('http://localhost:5000/getParsedUML', {
           prompt: inputValue,
         });
 
         console.log('Server Response:', response.data);
-        this.props.onResponse(response.data); // Send data to parent (Dashboard/UseCaseDiagram)
+        
+        // Send data to parent using onResponse prop
+        if (this.props.onResponse) {
+          this.props.onResponse(response.data);
+        }
+
         this.setState({ inputValue: '' });
       } catch (error) {
         console.error('Error sending message:', error);

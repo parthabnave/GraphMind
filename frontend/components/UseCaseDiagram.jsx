@@ -21,12 +21,52 @@ const createStickFigureShape = () => {
   });
 };
 
+function convertToDiagramJson(inputData) {
+  const elements = inputData[0].elements;
+  const systemBoundary = elements[0];
+  const useCases = systemBoundary.elements;
+  const useCaseNames = new Set(useCases.map(uc => uc.title));
+  const relationships = elements.slice(1);
+
+  const useCaseNameToTitle = Object.fromEntries(useCases.map(uc => [uc.name, uc.title]));
+  const actorNames = new Set();
+  for (const rel of relationships) {
+    if (!useCaseNames.has(rel.left)) actorNames.add(rel.left);
+  }
+  const actors = Array.from(actorNames);
+
+  const actorEntities = actors.map((actor, index) => ({
+    identifier: actor,
+    type: "actor",
+    position: { x: 50, y: 100 + index * 100 },
+    size: { width: 50, height: 80 },
+    label: actor
+  }));
+
+  const useCaseEntities = useCases.map((uc, index) => ({
+    identifier: useCaseNameToTitle[uc.name],
+    type: "useCase",
+    position: { x: 200, y: 100 + index * 80 },
+    size: { width: 120, height: 60 },
+    label: useCaseNameToTitle[uc.name]
+  }));
+
+  const relationshipsOutput = relationships.map(rel => ({
+    source: rel.left,
+    target: useCaseNameToTitle[rel.right] || rel.right,
+    type: rel.label?.toLowerCase().includes("include") ? "include" : "association"
+  }));
+
+  return { entities: [...actorEntities, ...useCaseEntities], relationships: relationshipsOutput };
+}
+
 const UseCaseDiagram = ({ data }) => {
   const paperRef = useRef(null);
   const graphRef = useRef(null);
   const systemRef = useRef(null);
   const tempSourceRef = useRef(null);
   const [selectedElement, setSelectedElement] = useState(null);
+  const [responseAI, setResponseAI] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [selectedLink, setSelectedLink] = useState(null);
   const [relationshipType, setRelationshipType] = useState("");
@@ -48,31 +88,121 @@ const UseCaseDiagram = ({ data }) => {
     isDrawingLinkRef.current = isDrawingLink;
   }, [isDrawingLink]);
 
+  const handleServerResponse = (data) => {
+    setServerResponse(data);
+    setResponseAI(true);
+  };
+
+  useEffect(() => {
+    if (serverResponse) {
+      const data = convertToDiagramJson(serverResponse);
+      localStorage.setItem("useCaseElements", JSON.stringify(data.entities));
+      localStorage.setItem("useCaseLinks", JSON.stringify(data.relationships));
+    }
+  }, [serverResponse]);
+
+  useEffect(() => {
+    if (responseAI) {
+      const updatedElements = JSON.parse(localStorage.getItem("useCaseElements")) || [];
+      const updatedLinks = JSON.parse(localStorage.getItem("useCaseLinks")) || [];
+      renderDiagram(updatedElements, updatedLinks);
+      setResponseAI(false);
+    }
+  }, [responseAI]);
+
+  const renderDiagram = (elementsData, linksData) => {
+    if (!graphRef.current) return;
+
+    graphRef.current.clear();
+    const elements = {};
+    const UMLActor = createStickFigureShape();
+
+    elementsData.forEach(entity => {
+      if (entity.type === "actor") {
+        const actor = new UMLActor();
+        actor.position(entity.position.x, entity.position.y);
+        actor.resize(entity.size.width, entity.size.height);
+        actor.attr({ label: { text: entity.label, refY: -15 } });
+        actor.prop("identifier", entity.identifier);
+        actor.prop("type", "actor");
+        actor.addTo(graphRef.current);
+        elements[entity.identifier] = actor;
+      } else if (entity.type === "useCase") {
+        const ellipse = new joint.shapes.standard.Ellipse();
+        ellipse.position(entity.position.x, entity.position.y);
+        ellipse.resize(entity.size.width, entity.size.height);
+        ellipse.attr({
+          body: { fill: "#d1ecf1", stroke: "#000", strokeWidth: 1.5 },
+          label: { text: entity.label, fill: "#000", fontSize: 16 },
+        });
+        ellipse.prop("identifier", entity.identifier);
+        ellipse.prop("type", "useCase");
+        ellipse.addTo(graphRef.current);
+        elements[entity.identifier] = ellipse;
+      }
+    });
+
+    linksData.forEach(link => {
+      const sourceElement = elements[link.source];
+      const targetElement = elements[link.target];
+      if (sourceElement && targetElement) {
+        const connection = new joint.shapes.standard.Link();
+        connection.source(sourceElement);
+        connection.target(targetElement);
+        connection.prop("relationshipType", link.type);
+        connection.attr({
+          line: {
+            stroke: '#000',
+            strokeWidth: 1.5,
+            strokeDasharray: (link.type === "include" || link.type === "extends") ? "5 5" : "0",
+            targetMarker: { type: "path", d: "M 10 -5 L 0 0 L 10 5", fill: '#000' }
+          },
+          labels: link.type === "include" ? [{
+            position: 0.5,
+            attrs: { text: { text: '<<include>>', fill: '#000', fontSize: 12, fontStyle: 'italic' }, rect: { fill: 'white', stroke: 'none' } }
+          }] : link.type === "extends" ? [{
+            position: 0.5,
+            attrs: { text: { text: '<<extends>>', fill: '#000', fontSize: 12, fontStyle: 'italic' }, rect: { fill: 'white', stroke: 'none' } }
+          }] : []
+        });
+        connection.addTo(graphRef.current);
+      }
+    });
+
+    const useCaseElements = graphRef.current.getElements().filter(el => el.prop('type') === 'useCase');
+    const systemBoundary = calculateSystemBoundary(useCaseElements);
+    const system = new joint.shapes.standard.Rectangle();
+    system.position(systemBoundary.x, systemBoundary.y);
+    system.resize(systemBoundary.width, systemBoundary.height);
+    system.attr({
+      body: { fill: "#f8f9fa", stroke: "#000", strokeWidth: 2 },
+      label: { text: tempEnvironmentName, fill: "#000", fontSize: 18, fontWeight: 'bold', textAnchor: 'middle', textVerticalAnchor: 'top', refY: 15, fontFamily: 'Poppins' },
+    });
+    system.addTo(graphRef.current);
+    system.toBack();
+    systemRef.current = system;
+  };
+
   const saveGraphState = () => {
     if (!graphRef.current) return;
 
-    const elements = graphRef.current.getElements()
-      .map(el => ({
-        identifier: el.prop('identifier'),
-        type: el.prop('type'),
-        position: el.position(),
-        size: el.size(),
-        label: el.prop('type') === 'actor' ? el.attr('label/text') : el.attr('label/text')
-      }))
-      .filter(el => el.identifier);
-
-    localStorage.setItem("useCaseElements", JSON.stringify(elements));
-    localStorage.setItem("projectName", projectName);
-    localStorage.setItem("environmentName", tempEnvironmentName); // Save the temp value permanently
-    setEnvironmentName(tempEnvironmentName); // Sync the saved value
+    const elements = graphRef.current.getElements().map(el => ({
+      identifier: el.prop('identifier'),
+      type: el.prop('type'),
+      position: el.position(),
+      size: el.size(),
+      label: el.attr('label/text')
+    }));
 
     const links = graphRef.current.getLinks().map(link => ({
       source: link.getSourceElement()?.prop('identifier'),
       target: link.getTargetElement()?.prop('identifier'),
-      relationshipType: link.prop('relationshipType') || 'association'
+      type: link.prop('relationshipType') || 'association'
     }));
 
+    localStorage.setItem("useCaseElements", JSON.stringify(elements));
     localStorage.setItem("useCaseLinks", JSON.stringify(links));
+    setResponseAI(true);
   };
 
   const handleElementClick = (elementView, evt) => {
@@ -128,7 +258,7 @@ const UseCaseDiagram = ({ data }) => {
     const systemBoundary = calculateSystemBoundary(useCaseElements);
     systemRef.current.position(systemBoundary.x, systemBoundary.y);
     systemRef.current.resize(systemBoundary.width, systemBoundary.height);
-    systemRef.current.attr({ label: { text: tempEnvironmentName } }); // Use temp value for display
+    systemRef.current.attr({ label: { text: tempEnvironmentName } });
   };
 
   useEffect(() => {
@@ -150,122 +280,11 @@ const UseCaseDiagram = ({ data }) => {
 
     const savedElements = JSON.parse(localStorage.getItem("useCaseElements")) || [];
     const savedLinks = JSON.parse(localStorage.getItem("useCaseLinks")) || [];
-    const elements = {};
-    const useCaseElements = [];
-
-    const createActor = (identifier, position, size, label) => {
-      const actor = new UMLActor();
-      actor.position(position.x, position.y);
-      actor.resize(size.width, size.height);
-      actor.attr({ label: { text: label, refY: -15 } });
-      actor.prop('identifier', identifier);
-      actor.prop('type', 'actor');
-      actor.addTo(graph);
-      elements[identifier] = actor;
-    };
-
-    const createUseCase = (identifier, position, size, label) => {
-      const ellipse = new joint.shapes.standard.Ellipse();
-      ellipse.position(position.x, position.y);
-      ellipse.resize(size.width, size.height);
-      ellipse.attr({
-        body: { fill: "#d1ecf1", stroke: "#000", strokeWidth: 1.5 },
-        label: { text: label, fill: "#000", fontSize: 16 },
-      });
-      ellipse.prop('identifier', identifier);
-      ellipse.prop('type', 'useCase');
-      ellipse.addTo(graph);
-      elements[identifier] = ellipse;
-      useCaseElements.push(ellipse);
-    };
-
     if (savedElements.length > 0) {
-      savedElements.forEach(savedEl => {
-        if (savedEl.type === 'actor') {
-          createActor(savedEl.identifier, savedEl.position, savedEl.size, savedEl.label);
-          const match = savedEl.identifier.match(/actor(\d+)/);
-          if (match && parseInt(match[1]) >= nextActorId) setNextActorId(parseInt(match[1]) + 1);
-        } else if (savedEl.type === 'useCase') {
-          createUseCase(savedEl.identifier, savedEl.position, savedEl.size, savedEl.label);
-          const match = savedEl.identifier.match(/useCase(\d+)/);
-          if (match && parseInt(match[1]) >= nextUseCaseId) setNextUseCaseId(parseInt(match[1]) + 1);
-        }
-      });
-
-      savedLinks.forEach(({ source, target, relationshipType }) => {
-        const sourceElement = elements[source];
-        const targetElement = elements[target];
-        if (sourceElement && targetElement) {
-          const link = new joint.shapes.standard.Link();
-          link.source(sourceElement);
-          link.target(targetElement);
-          link.prop('relationshipType', relationshipType);
-          link.attr({
-            line: {
-              stroke: '#000',
-              strokeWidth: 1.5,
-              strokeDasharray: (relationshipType === "includes" || relationshipType === "extends") ? "5 5" : "0",
-              targetMarker: { type: "path", d: "M 10 -5 L 0 0 L 10 5", fill: '#000' }
-            },
-            labels: relationshipType === "includes" ? [{
-              position: 0.5,
-              attrs: { text: { text: '<<include>>', fill: '#000', fontSize: 12, fontStyle: 'italic' }, rect: { fill: 'white', stroke: 'none' } }
-            }] : relationshipType === "extends" ? [{
-              position: 0.5,
-              attrs: { text: { text: '<<extends>>', fill: '#000', fontSize: 12, fontStyle: 'italic' }, rect: { fill: 'white', stroke: 'none' } }
-            }] : []
-          });
-          link.addTo(graph);
-        }
-      });
+      renderDiagram(savedElements, savedLinks);
     } else {
-      data.entities.forEach(entity => {
-        if (entity.type === 'actor') {
-          createActor(entity.identifier, entity.position, entity.size, entity.label);
-        } else if (entity.type === 'useCase') {
-          createUseCase(entity.identifier, entity.position, entity.size, entity.label);
-        }
-      });
-
-      data.relationships.forEach(rel => {
-        const sourceElement = elements[rel.source];
-        const targetElement = elements[rel.target];
-        if (sourceElement && targetElement) {
-          const link = new joint.shapes.standard.Link();
-          link.source(sourceElement);
-          link.target(targetElement);
-          link.prop('relationshipType', rel.relationshipType);
-          link.attr({
-            line: {
-              stroke: '#000',
-              strokeWidth: 1.5,
-              strokeDasharray: (rel.relationshipType === "includes" || rel.relationshipType === "extends") ? "5 5" : "0",
-              targetMarker: { type: "path", d: "M 10 -5 L 0 0 L 10 5", fill: '#000' }
-            },
-            labels: rel.relationshipType === "includes" ? [{
-              position: 0.5,
-              attrs: { text: { text: '<<include>>', fill: '#000', fontSize: 12, fontStyle: 'italic' }, rect: { fill: 'white', stroke: 'none' } }
-            }] : rel.relationshipType === "extends" ? [{
-              position: 0.5,
-              attrs: { text: { text: '<<extends>>', fill: '#000', fontSize: 12, fontStyle: 'italic' }, rect: { fill: 'white', stroke: 'none' } }
-            }] : []
-          });
-          link.addTo(graph);
-        }
-      });
+      renderDiagram(data.entities, data.relationships);
     }
-
-    const systemBoundary = calculateSystemBoundary(useCaseElements);
-    const system = new joint.shapes.standard.Rectangle();
-    system.position(systemBoundary.x, systemBoundary.y);
-    system.resize(systemBoundary.width, systemBoundary.height);
-    system.attr({
-      body: { fill: "#f8f9fa", stroke: "#000", strokeWidth: 2 },
-      label: { text: tempEnvironmentName, fill: "#000", fontSize: 18, fontWeight: 'bold', textAnchor: 'middle', textVerticalAnchor: 'top', refY: 15, fontFamily: 'Poppins' },
-    });
-    system.addTo(graph);
-    system.toBack();
-    systemRef.current = system;
 
     paper.on("element:pointerdown", handleElementClick);
     paper.on("element:pointerdblclick", (elementView) => {
@@ -273,7 +292,7 @@ const UseCaseDiagram = ({ data }) => {
       if (element === systemRef.current) {
         setIsEditingEnvironmentName(true);
         setInputValue(tempEnvironmentName);
-        setSelectedElement(null); // Ensure no element is selected
+        setSelectedElement(null);
       } else {
         setSelectedElement(element);
         setIsEditingEnvironmentName(false);
@@ -357,7 +376,7 @@ const UseCaseDiagram = ({ data }) => {
       document.removeEventListener('mouseup', handleMouseUp);
       if (paperRef.current) paperRef.current.removeEventListener('wheel', handleWheel);
     };
-  }, [data, tempEnvironmentName]); // Added tempEnvironmentName to re-render on change
+  }, []);
 
   const changeRelationshipType = (type) => {
     if (!selectedLink) return;
@@ -392,7 +411,7 @@ const UseCaseDiagram = ({ data }) => {
         setSelectedElement(null);
         updateSystemBoundary();
       } else if (isEditingEnvironmentName) {
-        setTempEnvironmentName(inputValue); // Update temporary value
+        setTempEnvironmentName(inputValue);
         setInputValue("");
         setIsEditingEnvironmentName(false);
         updateSystemBoundary();
@@ -476,10 +495,6 @@ const UseCaseDiagram = ({ data }) => {
       link.click();
     });
     setShowExportDropdown(false);
-  };
-
-  const handleServerResponse = (data) => {
-    console.log("Data received in parent:", data);
   };
 
   return (
@@ -709,7 +724,7 @@ const UseCaseDiagram = ({ data }) => {
         >
           <span>Delete</span>
         </button>
-        <Chatbox onResponse={(data) => setServerResponse(data)} />
+        <Chatbox onResponse={(data) => handleServerResponse(data)} />
       </div>
 
       <div style={{
