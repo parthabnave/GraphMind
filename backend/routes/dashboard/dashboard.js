@@ -6,6 +6,7 @@ router.get('/', UserVerification, async (req, res) => {
     try {
         // console.log("User ID:", req.user.id);
         // console.log("Collection name:", Diagram.collection.name);
+        // const user_id=req.user.id;
 
         let history = await Diagram.find({});
         // console.log("Fetched history:", history);

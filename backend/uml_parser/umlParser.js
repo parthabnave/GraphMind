@@ -15,7 +15,7 @@ router.post("/", async (req, res) => {
         );
 
         const plantUMLCode = getData.data;
-        // console.log(plantUMLCode);
+        console.log(plantUMLCode);
         const requiredData=plantUMLCode.plantuml_code;
         const parsedData = parse(requiredData);
         console.log("parsedData",parsedData);
