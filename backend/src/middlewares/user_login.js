@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const secret = require("../secret"); // Ensure this path is correct
+const secret = require("../config/secret"); // Ensure this path is correct
 
 function UserVerification(req, res, next) {
     // Get the token from the request header

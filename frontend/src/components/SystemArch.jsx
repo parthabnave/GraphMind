@@ -1,6 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as joint from 'jointjs';
 import 'jointjs/dist/joint.css';
+import { Button, Box, Typography, TextField } from '@mui/material';
 
 const DiagramEditor = ({ data }) => {
     const paperRef = useRef(null);
@@ -142,9 +144,9 @@ const DiagramEditor = ({ data }) => {
             const clientPosition = paper.localToClientPoint({ x: centerX, y: centerY });
             
             // Adjust for any scrolling in the container
-            const containerRect = paperRef.current.getBoundingClientRect();
-            const scrollLeft = paperRef.current.scrollLeft;
-            const scrollTop = paperRef.current.scrollTop;
+            // const containerRect = paperRef.current.getBoundingClientRect();
+            // const scrollLeft = paperRef.current.scrollLeft;
+            // const scrollTop = paperRef.current.scrollTop;
             
             setEditingElement(element);
             setInputValue(name);
@@ -196,20 +198,20 @@ const DiagramEditor = ({ data }) => {
             }
         };
 
+        const paperElement = paperRef.current;
         document.addEventListener('keydown', handleKeyDown);
-        paperRef.current.addEventListener('wheel', handleWheel, { passive: false });
+        paperElement.addEventListener('wheel', handleWheel, { passive: false });
 
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
-            if (paperRef.current) {
-                paperRef.current.removeEventListener('wheel', handleWheel);
+            if (paperElement) {
+                paperElement.removeEventListener('wheel', handleWheel);
             }
         };
 
-    }, [data, scale]);
+    }, [data, scale, zoomIn, zoomOut]);
 
-    // Zoom Functions
-    const zoomIn = () => {
+    const zoomIn = useCallback(() => {
         const newScale = Math.min(3, scale + 0.1);
         setScale(newScale);
         
@@ -219,9 +221,9 @@ const DiagramEditor = ({ data }) => {
         const centerY = paperEl.clientHeight / 2;
         
         graphRef.current.scale(newScale, newScale, centerX, centerY);
-    };
+    }, [scale]);
 
-    const zoomOut = () => {
+    const zoomOut = useCallback(() => {
         const newScale = Math.max(0.1, scale - 0.1);
         setScale(newScale);
         
@@ -231,7 +233,7 @@ const DiagramEditor = ({ data }) => {
         const centerY = paperEl.clientHeight / 2;
         
         graphRef.current.scale(newScale, newScale, centerX, centerY);
-    };
+    }, [scale]);
 
     // Handle renaming input
     const handleRename = (event) => {
@@ -287,47 +289,54 @@ const DiagramEditor = ({ data }) => {
     };
 
     return (
-        <div>
-            <div style={{ marginBottom: "10px" }}>
-                <button onClick={zoomIn}>Zoom In</button>
-                <button onClick={zoomOut} style={{ marginLeft: "5px" }}>Zoom Out</button>
-                <span style={{ marginLeft: "10px" }}>
+        <Box sx={{ p: 2 }}>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                <Button variant="outlined" onClick={zoomIn} sx={{ mr: 1 }}>Zoom In</Button>
+                <Button variant="outlined" onClick={zoomOut}>Zoom Out</Button>
+                <Typography variant="body1" sx={{ ml: 2 }}>
                     <strong>Scale: {Math.round(scale * 100)}%</strong> | 
                     Press <strong>Ctrl++</strong> to zoom in, <strong>Ctrl+-</strong> to zoom out, or <strong>Ctrl+scroll</strong>
-                </span>
-            </div>
-            <div 
+                </Typography>
+            </Box>
+            <Box 
                 ref={paperRef} 
-                style={{ 
-                    width: "1000px", 
-                    height: "600px", 
-                    border: "1px solid black", 
-                    overflow: "auto",
-                    position: "relative"
-                }} 
+                sx={{
+                    width: '100%',
+                    height: 600,
+                    border: '1px solid', // Use theme border
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    position: 'relative',
+                    bgcolor: 'background.paper',
+                }}
             />
             
             {/* Input Box for Renaming */}
-            <input
-                ref={inputRef}
+            <TextField
+                inputRef={inputRef}
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleRename}
                 onBlur={handleBlur}
-                style={{
+                sx={{
                     position: "absolute",
-                    display: "none",
+                    display: editingElement ? "block" : "none",
                     zIndex: 1000,
                     padding: "5px",
-                    border: "2px solid #007bff",
+                    border: "2px solid",
+                    borderColor: 'primary.main',
                     borderRadius: "4px",
                     background: "white",
                     textAlign: "center",
-                    fontFamily: "inherit"
+                    fontFamily: "inherit",
+                    // Positioning will be handled by JS in useEffect
                 }}
+                size="small"
+                variant="outlined"
             />
-        </div>
+        </Box>
     );
 };
 

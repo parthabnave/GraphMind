@@ -4,9 +4,9 @@ const app=express();
 const cors = require('cors');
 app.use(cors());
 
-const login=require("../backend/routes/login/login");
-const dashboard=require("../backend/routes/dashboard/dashboard");
-const getParsedUML=require("../backend/uml_parser/umlParser");
+const login=require("./routes/login/login");
+const dashboard=require("./routes/dashboard/dashboard");
+const getParsedUML=require("./uml_parser/umlParser");
 const getData=require("./routes/db_access_frontend/access");
 app.use(express.json());
 

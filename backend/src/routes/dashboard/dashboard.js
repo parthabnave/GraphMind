@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const UserVerification = require('../../middlewares/user_login');
-const { Diagram } = require("../../../db/User_schema");
+const { Diagram } = require("../../models/User_schema");
 
 router.get('/', UserVerification, async (req, res) => {
     try {

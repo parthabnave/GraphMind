@@ -1,8 +1,8 @@
 const router = require('express').Router();
-const {User} = require('../../../db/User_schema');
+const {User} = require('../../models/User_schema');
 const bcrypt = require('bcrypt');
 const jwt=require('jsonwebtoken');
-const secret=require("../../secret");
+const secret=require("../../config/secret");
 const salt=7;
 
 router.post("/login",async(req,res)=>{

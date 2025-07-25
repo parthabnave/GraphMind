@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as joint from "jointjs";
 
 const UMLDiagram = ({ umlData }) => {
@@ -16,10 +16,10 @@ const UMLDiagram = ({ umlData }) => {
   const [selectedElement, setSelectedElement] = useState(null);
   const [elementName, setElementName] = useState("");
   const [inputPosition, setInputPosition] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [zoom] = useState(1);
   const [forceRender, setForceRender] = useState(0);
 
-  const renderDiagram = (data) => {
+  const renderDiagram = useCallback((data) => {
     if (!data || data.length === 0) {
       console.error("Invalid or empty UML data provided.");
       return;
@@ -205,11 +205,11 @@ const UMLDiagram = ({ umlData }) => {
         return newPositions;
       });
     });
-  };
+  }, [elementPositions, renamedElements, zoom]);
 
   useEffect(() => {
     renderDiagram(umlData);
-  }, [umlData, renamedElements, zoom, forceRender]);
+  }, [umlData, renamedElements, zoom, forceRender, renderDiagram]);
 
   useEffect(() => {
     // Save renamed elements to local storage

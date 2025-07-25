@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as joint from "jointjs";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -77,7 +78,7 @@ const UseCaseDiagram = ({ data }) => {
   const [serverResponse, setServerResponse] = useState(null);
   const [nextUseCaseId, setNextUseCaseId] = useState(1);
   const [projectName, setProjectName] = useState(localStorage.getItem("projectName") || "Project Name");
-  const [environmentName, setEnvironmentName] = useState(localStorage.getItem("environmentName") || "System");
+  const [environmentName] = useState(localStorage.getItem("environmentName") || "System");
   const [tempEnvironmentName, setTempEnvironmentName] = useState(environmentName);
   const [isEditingProjectName, setIsEditingProjectName] = useState(false);
   const [isEditingEnvironmentName, setIsEditingEnvironmentName] = useState(false);
@@ -108,9 +109,9 @@ const UseCaseDiagram = ({ data }) => {
       renderDiagram(updatedElements, updatedLinks);
       setResponseAI(false);
     }
-  }, [responseAI]);
+  }, [responseAI, renderDiagram]);
 
-  const renderDiagram = (elementsData, linksData) => {
+  const renderDiagram = useCallback((elementsData, linksData) => {
     if (!graphRef.current) return;
 
     graphRef.current.clear();
@@ -181,7 +182,7 @@ const UseCaseDiagram = ({ data }) => {
     system.addTo(graphRef.current);
     system.toBack();
     systemRef.current = system;
-  };
+  }, [tempEnvironmentName]);
 
   const saveGraphState = () => {
     if (!graphRef.current) return;
@@ -252,14 +253,14 @@ const UseCaseDiagram = ({ data }) => {
     return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
   };
 
-  const updateSystemBoundary = () => {
+  const updateSystemBoundary = useCallback(() => {
     if (!graphRef.current || !systemRef.current) return;
     const useCaseElements = graphRef.current.getElements().filter(el => el.prop('type') === 'useCase');
     const systemBoundary = calculateSystemBoundary(useCaseElements);
     systemRef.current.position(systemBoundary.x, systemBoundary.y);
     systemRef.current.resize(systemBoundary.width, systemBoundary.height);
     systemRef.current.attr({ label: { text: tempEnvironmentName } });
-  };
+  }, [tempEnvironmentName]);
 
   useEffect(() => {
     if (!paperRef.current) return;
@@ -369,14 +370,15 @@ const UseCaseDiagram = ({ data }) => {
       paper.scale(newScale, newScale);
     };
 
-    paperRef.current.addEventListener('wheel', handleWheel);
+    const paperElement = paperRef.current;
+    paperElement.addEventListener('wheel', handleWheel);
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
-      if (paperRef.current) paperRef.current.removeEventListener('wheel', handleWheel);
+      if (paperElement) paperElement.removeEventListener('wheel', handleWheel);
     };
-  }, []);
+  }, [data.entities, data.relationships, isDrawingLink, renderDiagram, tempEnvironmentName, updateSystemBoundary]);
 
   const changeRelationshipType = (type) => {
     if (!selectedLink) return;
@@ -498,33 +500,35 @@ const UseCaseDiagram = ({ data }) => {
   };
 
   return (
-    <div style={{ 
+    <Box sx={{ 
       position: "relative", 
       display: "flex", 
       flexDirection: "row-reverse",
       width: "1500px",
       height: "900px",
-      backgroundColor: "#f8f9fa",
+      bgcolor: "background.default",
       borderRadius: "8px",
       boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
       overflow: "hidden"
     }}>
-      <div
+      <Box
         ref={paperRef}
-        style={{
+        sx={{
           flex: 1,
-          border: "1px solid #dee2e6",
+          border: "1px solid",
+          borderColor: "divider",
           borderRadius: "8px 0 0 8px",
-          backgroundColor: "white",
+          bgcolor: "background.paper",
           overflow: "hidden"
         }}
-      ></div>
+      ></Box>
 
-      <div style={{
+      <Box sx={{
         width: "220px",
         height: "900px",
-        backgroundColor: "#ffffff",
-        borderLeft: "1px solid #dee2e6",
+        bgcolor: "background.paper",
+        borderLeft: "1px solid",
+        borderColor: "divider",
         padding: "20px",
         display: "flex",
         flexDirection: "column",
@@ -532,30 +536,31 @@ const UseCaseDiagram = ({ data }) => {
         boxShadow: "-2px 0 4px rgba(0,0,0,0.05)",
         position: "relative"
       }}>
-        <div 
+        <Box 
           onDoubleClick={() => setIsEditingProjectName(true)}
-          style={{ 
+          sx={{ 
             textAlign: "center", 
-            margin: "0 0 15px 0", 
+            mb: 2, 
             fontSize: "16px",
-            color: "#333",
+            color: "text.primary",
             fontWeight: "600",
             fontFamily: 'Poppins, sans-serif',
             cursor: "pointer"
           }}
         >
           {isEditingProjectName ? (
-            <input
+            <TextField
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               onKeyDown={handleProjectNameChange}
               onBlur={() => setIsEditingProjectName(false)}
-              style={{
+              sx={{
                 padding: "5px",
-                border: "2px solid #007bff",
+                border: "2px solid",
+                borderColor: "primary.main",
                 borderRadius: "4px",
-                backgroundColor: "white",
+                backgroundColor: "background.paper",
                 width: "100%",
                 textAlign: "center",
                 fontSize: "16px",
@@ -564,30 +569,36 @@ const UseCaseDiagram = ({ data }) => {
                 outline: "none"
               }}
               autoFocus
+              variant="outlined"
+              size="small"
             />
           ) : (
             projectName
           )}
-        </div>
+        </Box>
         
-        <button
+        <Button
+          variant="outlined"
           onClick={() => { setToolbarMode('actor'); addActor(); }}
-          style={{ 
-            padding: "12px 8px", 
-            background: toolbarMode === 'actor' ? '#007bff' : '#ffffff', 
-            color: toolbarMode === 'actor' ? 'white' : '#333', 
-            border: "1px solid #dee2e6", 
-            borderRadius: "6px", 
+          sx={{ 
+            p: 1.5, 
+            bgcolor: toolbarMode === 'actor' ? 'primary.main' : 'background.paper', 
+            color: toolbarMode === 'actor' ? 'white' : 'text.primary', 
+            borderColor: 'divider', 
+            borderRadius: 1.5, 
             cursor: "pointer", 
             display: "flex", 
             flexDirection: "column", 
             alignItems: "center", 
-            gap: "8px",
+            gap: 1,
             fontWeight: "500",
             fontFamily: 'Poppins, sans-serif',
             fontSize: "14px",
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-            transition: "all 0.2s ease"
+            transition: "all 0.2s ease",
+            '&:hover': {
+              bgcolor: toolbarMode === 'actor' ? 'primary.dark' : 'action.hover',
+            }
           }}
         >
           <svg 
@@ -598,77 +609,86 @@ const UseCaseDiagram = ({ data }) => {
           >
             <path 
               d="M 0 -15 m 0 -9 a 9 9 0 1 0 0.1 0 Z M 0 -15 L 0 15 M -15 0 L 15 0 M -12 35 L 0 15 L 12 35" 
-              stroke="#000" 
+              stroke="currentColor" 
               strokeWidth="2.5" 
               fill="none" 
             />
           </svg>
-          <span>Actor</span>
-        </button>
+          <Typography variant="body2">Actor</Typography>
+        </Button>
         
-        <button
+        <Button
+          variant="outlined"
           onClick={() => { setToolbarMode('useCase'); addUseCase(); }}
-          style={{ 
-            padding: "12px 8px", 
-            background: toolbarMode === 'useCase' ? '#007bff' : '#ffffff', 
-            color: toolbarMode === 'useCase' ? 'white' : '#333', 
-            border: "1px solid #dee2e6", 
-            borderRadius: "6px", 
+          sx={{ 
+            p: 1.5, 
+            bgcolor: toolbarMode === 'useCase' ? 'primary.main' : 'background.paper', 
+            color: toolbarMode === 'useCase' ? 'white' : 'text.primary', 
+            borderColor: 'divider', 
+            borderRadius: 1.5, 
             cursor: "pointer", 
             display: "flex", 
             flexDirection: "column", 
             alignItems: "center", 
-            gap: "8px",
+            gap: 1,
             fontWeight: "500",
             fontFamily: 'Poppins, sans-serif',
             fontSize: "14px",
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-            transition: "all 0.2s ease"
+            transition: "all 0.2s ease",
+            '&:hover': {
+              bgcolor: toolbarMode === 'useCase' ? 'primary.dark' : 'action.hover',
+            }
           }}
         >
-          <div style={{ width: "50px", height: "30px", border: "2px solid #000", borderRadius: "50%", margin: "0 auto", backgroundColor: "#d1ecf1" }}></div>
-          <span>Use Case</span>
-        </button>
+          <Box sx={{ width: "50px", height: "30px", border: "2px solid", borderColor: "text.primary", borderRadius: "50%", margin: "0 auto", bgcolor: "info.light" }}></Box>
+          <Typography variant="body2">Use Case</Typography>
+        </Button>
         
-        <button
+        <Button
+          variant="outlined"
           onClick={startConnection}
-          style={{ 
-            padding: "12px 8px", 
-            background: toolbarMode === 'link' ? '#007bff' : '#ffffff', 
-            color: toolbarMode === 'link' ? 'white' : '#333', 
-            border: "1px solid #dee2e6", 
-            borderRadius: "6px", 
+          sx={{ 
+            p: 1.5, 
+            bgcolor: toolbarMode === 'link' ? 'primary.main' : 'background.paper', 
+            color: toolbarMode === 'link' ? 'white' : 'text.primary', 
+            borderColor: 'divider', 
+            borderRadius: 1.5, 
             cursor: "pointer", 
             display: "flex", 
             flexDirection: "column", 
             alignItems: "center", 
-            gap: "8px",
+            gap: 1,
             fontWeight: "500",
             fontFamily: 'Poppins, sans-serif',
             fontSize: "14px",
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-            transition: "all 0.2s ease"
+            transition: "all 0.2s ease",
+            '&:hover': {
+              bgcolor: toolbarMode === 'link' ? 'primary.dark' : 'action.hover',
+            }
           }}
         >
-          <div style={{ width: "50px", height: "30px", position: "relative", margin: "0 auto" }}>
-            <div style={{ position: "absolute", top: "14px", left: "0", width: "50px", height: "2px", backgroundColor: "#000" }}></div>
-            <div style={{ position: "absolute", top: "9px", right: "0", width: "10px", height: "10px", borderTop: "2px solid #000", borderRight: "2px solid #000", transform: "rotate(45deg)" }}></div>
-          </div>
-          <span>Connect</span>
-        </button>
+          <Box sx={{ width: "50px", height: "30px", position: "relative", margin: "0 auto" }}>
+            <Box sx={{ position: "absolute", top: "14px", left: "0", width: "50px", height: "2px", bgcolor: "text.primary" }}></Box>
+            <Box sx={{ position: "absolute", top: "9px", right: "0", width: "10px", height: "10px", borderTop: "2px solid", borderRight: "2px solid", borderColor: "text.primary", transform: "rotate(45deg)" }}></Box>
+          </Box>
+          <Typography variant="body2">Connect</Typography>
+        </Button>
 
         {(selectedElement || isEditingEnvironmentName) && (
-          <input
+          <TextField
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleRename}
             placeholder={selectedElement ? "Enter new name" : "Enter environment name"}
-            style={{
+            sx={{
               padding: "10px",
-              border: "2px solid #007bff",
+              border: "2px solid",
+              borderColor: "primary.main",
               borderRadius: "4px",
-              backgroundColor: "white",
+              backgroundColor: "background.paper",
               width: "100%",
               textAlign: "center",
               boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
@@ -676,249 +696,240 @@ const UseCaseDiagram = ({ data }) => {
               fontFamily: 'Poppins, sans-serif'
             }}
             autoFocus
+            variant="outlined"
+            size="small"
           />
         )}
         
-        <button
+        <Button
+          variant="contained"
           onClick={saveGraphState}
-          style={{ 
-            padding: "12px 8px", 
-            background: '#28a745', 
-            color: 'white', 
-            border: "1px solid #dee2e6", 
-            borderRadius: "6px", 
-            cursor: "pointer", 
-            display: "flex", 
-            flexDirection: "column", 
-            alignItems: "center", 
-            gap: "8px",
-            fontWeight: "500",
-            fontFamily: 'Poppins, sans-serif',
-            fontSize: "14px",
+          color="success"
+          sx={{ 
+            p: 1.5, 
+            borderRadius: 1.5, 
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
             transition: "all 0.2s ease"
           }}
         >
-          <span>Save</span>
-        </button>
+          <Typography variant="body2">Save</Typography>
+        </Button>
         
-        <button
+        <Button
+          variant="contained"
           onClick={deleteElement}
-          style={{ 
-            padding: "12px 8px", 
-            background: '#dc3545', 
-            color: 'white', 
-            border: "1px solid #dee2e6", 
-            borderRadius: "6px", 
-            cursor: "pointer", 
-            display: "flex", 
-            flexDirection: "column", 
-            alignItems: "center", 
-            gap: "8px",
-            fontWeight: "500",
-            fontFamily: 'Poppins, sans-serif',
-            fontSize: "14px",
+          color="error"
+          sx={{ 
+            p: 1.5, 
+            borderRadius: 1.5, 
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
             transition: "all 0.2s ease"
           }}
         >
-          <span>Delete</span>
-        </button>
+          <Typography variant="body2">Delete</Typography>
+        </Button>
         <Chatbox onResponse={(data) => handleServerResponse(data)} />
-      </div>
+      </Box>
 
-      <div style={{
+      <Box sx={{
         position: "absolute",
         top: "10px",
         right: "10px",
         zIndex: "10"
       }}>
-        <button
+        <Button
+          variant="contained"
           onClick={() => setShowExportDropdown(!showExportDropdown)}
-          style={{
-            padding: "8px 16px",
-            background: "#007bff",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontFamily: 'Poppins, sans-serif',
-            fontWeight: "500",
+          color="primary"
+          sx={{
+            p: "8px 16px",
+            borderRadius: 1.5,
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
             transition: "all 0.2s ease"
           }}
         >
           Export
-        </button>
+        </Button>
         {showExportDropdown && (
-          <div style={{
+          <Paper sx={{
             position: "absolute",
             top: "100%",
             right: "0",
-            marginTop: "5px",
-            backgroundColor: "white",
-            border: "1px solid #dee2e6",
-            borderRadius: "6px",
+            mt: 0.5,
+            bgcolor: "background.paper",
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 1.5,
             boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
             display: "flex",
             flexDirection: "column",
             width: "100px"
           }}>
-            <button
+            <Button
               onClick={exportToPDF}
-              style={{
-                padding: "8px",
-                background: "white",
-                color: "#333",
-                border: "none",
-                borderBottom: "1px solid #dee2e6",
-                cursor: "pointer",
-                fontFamily: 'Poppins, sans-serif',
-                fontWeight: "500",
-                textAlign: "left",
-                transition: "background 0.2s ease"
+              sx={{
+                p: 1,
+                color: "text.primary",
+                borderBottom: "1px solid",
+                borderColor: "divider",
+                borderRadius: 0,
+                justifyContent: "flex-start",
+                textTransform: "none",
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                }
               }}
-              onMouseOver={(e) => e.target.style.background = '#f1f3f5'}
-              onMouseOut={(e) => e.target.style.background = 'white'}
             >
               PDF
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={exportToPNG}
-              style={{
-                padding: "8px",
-                background: "white",
-                color: "#333",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: 'Poppins, sans-serif',
-                fontWeight: "500",
-                textAlign: "left",
-                transition: "background 0.2s ease"
+              sx={{
+                p: 1,
+                color: "text.primary",
+                borderRadius: 0,
+                justifyContent: "flex-start",
+                textTransform: "none",
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                }
               }}
-              onMouseOver={(e) => e.target.style.background = '#f1f3f5'}
-              onMouseOut={(e) => e.target.style.background = 'white'}
             >
               PNG
-            </button>
-          </div>
+            </Button>
+          </Paper>
         )}
-      </div>
+      </Box>
 
       {selectedLink && (
-        <div style={{
+        <Paper sx={{
           position: "absolute",
           left: "50%",
           bottom: "20px",
           transform: "translateX(-50%)",
           zIndex: "10",
-          padding: "15px",
-          backgroundColor: "white",
-          borderRadius: "8px",
+          p: 2,
+          bgcolor: "background.paper",
+          borderRadius: 1,
           boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-          border: "1px solid #dee2e6",
+          border: "1px solid",
+          borderColor: "divider",
           display: "flex",
           flexDirection: "column",
-          gap: "10px"
+          gap: 1.5
         }}>
-          <h3 style={{ 
-            margin: "0 0 10px 0", 
+          <Typography variant="h6" sx={{ 
             textAlign: "center",
-            color: "#333",
-            fontSize: "16px",
+            color: "text.primary",
             fontWeight: "500",
             fontFamily: 'Poppins, sans-serif'
-          }}>Set Relationship Type:</h3>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button 
+          }}>Set Relationship Type:</Typography>
+          <Box sx={{ display: "flex", gap: 1.5 }}>
+            <Button 
+              variant="outlined"
               onClick={() => changeRelationshipType('association')} 
-              style={{ 
-                padding: "8px 12px", 
-                background: relationshipType === 'association' ? '#007bff' : '#ffffff', 
-                color: relationshipType === 'association' ? 'white' : '#333', 
-                border: "1px solid #dee2e6", 
-                borderRadius: "4px", 
+              sx={{ 
+                p: "8px 12px", 
+                bgcolor: relationshipType === 'association' ? 'primary.main' : 'background.paper', 
+                color: relationshipType === 'association' ? 'white' : 'text.primary', 
+                borderColor: 'divider', 
+                borderRadius: 1, 
                 cursor: "pointer",
                 boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
                 transition: "all 0.2s ease",
                 fontFamily: 'Poppins, sans-serif',
-                fontWeight: "500"
+                fontWeight: "500",
+                '&:hover': {
+                  bgcolor: relationshipType === 'association' ? 'primary.dark' : 'action.hover',
+                }
               }}>
               Association
-            </button>
-            <button 
+            </Button>
+            <Button 
+              variant="outlined"
               onClick={() => changeRelationshipType('includes')} 
-              style={{ 
-                padding: "8px 12px", 
-                background: relationshipType === 'includes' ? '#007bff' : '#ffffff', 
-                color: relationshipType === 'includes' ? 'white' : '#333', 
-                border: "1px solid #dee2e6", 
-                borderRadius: "4px", 
+              sx={{ 
+                p: "8px 12px", 
+                bgcolor: relationshipType === 'includes' ? 'primary.main' : 'background.paper', 
+                color: relationshipType === 'includes' ? 'white' : 'text.primary', 
+                borderColor: 'divider', 
+                borderRadius: 1, 
                 cursor: "pointer",
                 boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
                 transition: "all 0.2s ease",
                 fontFamily: 'Poppins, sans-serif',
-                fontWeight: "500"
+                fontWeight: "500",
+                '&:hover': {
+                  bgcolor: relationshipType === 'includes' ? 'primary.dark' : 'action.hover',
+                }
               }}>
               Include
-            </button>
-            <button 
+            </Button>
+            <Button 
+              variant="outlined"
               onClick={() => changeRelationshipType('extends')} 
-              style={{ 
-                padding: "8px 12px", 
-                background: relationshipType === 'extends' ? '#007bff' : '#ffffff', 
-                color: relationshipType === 'extends' ? 'white' : '#333', 
-                border: "1px solid #dee2e6", 
-                borderRadius: "4px", 
+              sx={{ 
+                p: "8px 12px", 
+                bgcolor: relationshipType === 'extends' ? 'primary.main' : 'background.paper', 
+                color: relationshipType === 'extends' ? 'white' : 'text.primary', 
+                borderColor: 'divider', 
+                borderRadius: 1, 
                 cursor: "pointer",
                 boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
                 transition: "all 0.2s ease",
                 fontFamily: 'Poppins, sans-serif',
-                fontWeight: "500"
+                fontWeight: "500",
+                '&:hover': {
+                  bgcolor: relationshipType === 'extends' ? 'primary.dark' : 'action.hover',
+                }
               }}>
               Extend
-            </button>
-          </div>
-          <button 
+            </Button>
+          </Box>
+          <Button 
+            variant="outlined"
             onClick={() => setSelectedLink(null)} 
-            style={{ 
-              padding: "8px 12px", 
-              background: '#f8f9fa', 
-              color: '#333', 
-              border: "1px solid #dee2e6", 
-              borderRadius: "4px", 
+            sx={{ 
+              p: "8px 12px", 
+              bgcolor: 'background.default', 
+              color: 'text.primary', 
+              borderColor: 'divider', 
+              borderRadius: 1, 
               cursor: "pointer", 
-              marginTop: "5px",
+              mt: 0.5,
               boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
               transition: "all 0.2s ease",
               fontFamily: 'Poppins, sans-serif',
-              fontWeight: "500"
+              fontWeight: "500",
+              '&:hover': {
+                bgcolor: 'action.hover',
+              }
             }}>
             Cancel
-          </button>
-        </div>
+          </Button>
+        </Paper>
       )}
 
       {isDrawingLink && (
-        <div style={{
+        <Paper sx={{
           position: "absolute",
           top: "15px",
           left: "50%",
           transform: "translateX(-50%)",
           zIndex: "10",
-          padding: "10px 20px",
-          backgroundColor: "rgba(0, 123, 255, 0.95)",
+          p: "10px 20px",
+          bgcolor: "primary.main",
           color: "white",
-          borderRadius: "6px",
+          borderRadius: 1,
           boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
           fontSize: "14px",
           fontWeight: "500",
           fontFamily: 'Poppins, sans-serif'
         }}>
           {sourceElement ? "Click target element to connect" : "Click source element to start"}
-        </div>
+        </Paper>
       )}
-    </div>
+    </Box>
   );
 };
 

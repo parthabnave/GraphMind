@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { Diagram } = require("../../../db/User_schema");
+const { Diagram } = require("../../models/User_schema");
 const router = require("express").Router();
 
 router.post("/", async (req, res) => {

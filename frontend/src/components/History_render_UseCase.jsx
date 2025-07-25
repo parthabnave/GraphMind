@@ -1,4 +1,4 @@
-function UseCase({MyJson})
+function UseCase()
 {
     
 }

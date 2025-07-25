@@ -6,7 +6,7 @@
   "scripts": {
     "install": "npm install --prefix backend && npm install --prefix frontend",
     "build": "npm run build --prefix frontend",
-    "start": "node backend/index.js"
+    "start": "npm start --prefix backend"
   },
   "repository": {
     "type": "git",
@@ -18,15 +18,5 @@
   "bugs": {
     "url": "https://github.com/parthabnave/GraphMind/issues"
   },
-  "homepage": "https://github.com/parthabnave/GraphMind#readme",
-  "dependencies": {
-    "axios": "^1.8.4",
-    "bcrypt": "^5.1.1",
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.15.0",
-    "mongoose": "^8.12.1",
-    "plantuml-parser": "^0.4.0"
-  }
+  "homepage": "https://github.com/parthabnave/GraphMind#readme"
 }
